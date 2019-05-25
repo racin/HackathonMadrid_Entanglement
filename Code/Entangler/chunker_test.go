@@ -7,7 +7,7 @@ import (
 )
 
 func TestChunkFile(t *testing.T) {
-	filePath := "../../resources/images/swarm_logo.jpeg"
+	filePath := "../../resources/images/ArraySatelite.jpg"
 
 	t.Run("TestChunker", func(t *testing.T) {
 		dir, err := os.Getwd()

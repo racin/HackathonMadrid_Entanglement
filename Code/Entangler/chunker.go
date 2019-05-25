@@ -5,25 +5,25 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
-	"path/filepath"
+	//"path/filepath"
 	"strconv"
 )
 
-const maxChunkSize float64 = 3900
+const MaxChunkSize float64 = 3900
 
 func ChunkFile(file *os.File) ([]byte, error) {
 	defer file.Close()
 	fileinfo, _ := file.Stat()
 	fileSize := float64(fileinfo.Size())
 
-	totalChunks := uint64(math.Ceil(fileSize / maxChunkSize))
+	totalChunks := uint64(math.Ceil(fileSize / MaxChunkSize))
 
 	for i := uint64(0); i < totalChunks; i = i + 1 {
-		currChunkSize := math.Min(maxChunkSize, fileSize-(float64(i)*maxChunkSize))
+		currChunkSize := math.Min(MaxChunkSize, fileSize-(float64(i)*MaxChunkSize))
 		currChunk := make([]byte, int(currChunkSize))
 
 		file.Read(currChunk)
-		filename := strconv.Itoa(int(i)) + "_" + filepath.Base(file.Name())
+		filename := "d" + strconv.Itoa(int(i))
 		if _, err := os.Create(filename); err == nil {
 
 		} else {
