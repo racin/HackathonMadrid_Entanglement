@@ -34,3 +34,5 @@ func ReadChunk(filePath string) ([]byte, error) {
 	file.Read(output)
 	return output, nil
 }
+
+func RebuildFile()
