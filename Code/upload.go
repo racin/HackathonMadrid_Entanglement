@@ -1,4 +1,4 @@
-package main
+package upload
 
 //import requiered libraries
 import (
@@ -16,7 +16,7 @@ var (
 	err     error
 )
 
-func main() {
+func upload() {
 
 	var path string
 	//define Swarm cliente
