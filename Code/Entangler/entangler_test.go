@@ -1,6 +1,8 @@
 package Entangler
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -71,4 +73,41 @@ func TestGetMemoryPosition(t *testing.T) {
 func TestEntangleFile(t *testing.T) {
 	filePath := "../../resources/images/swarm_logo.jpeg"
 	EntangleFile(filePath)
+
+}
+
+func TestEntangler(t *testing.T) {
+	// check hash of data block
+	data, _ := ReadChunk("../../testing/p7_13")
+	p1, _ := ReadChunk("../../testing/d1")
+	p2, _ := ReadChunk("../../testing/d7")
+
+	// Xor two parities
+	rData, _ := XORByteSlice(p1, p2)
+
+	// Compare hash
+	dataHash := sha256.Sum256(data)
+	parityHash := sha256.Sum256(rData)
+	dataHashStr := fmt.Sprintf("%x", dataHash)
+	parityHashStr := fmt.Sprintf("%x", parityHash)
+
+	fmt.Println(dataHashStr)
+	fmt.Println(parityHashStr)
+
+	assert.Equal(t, dataHashStr, parityHashStr, "Hash should be equal")
+}
+
+func TestXOR(t *testing.T) {
+	a := []byte{0xb9, 0x63}
+	b := []byte{0x66, 0xcc}
+
+	// Xor two parities
+	c, _ := XORByteSlice(a, b)
+
+	// Compare hash
+	cStr := fmt.Sprintf("%x", c)
+
+	fmt.Println(c)
+
+	assert.Equal(t, "dfaf", cStr, "Hash should be equal")
 }

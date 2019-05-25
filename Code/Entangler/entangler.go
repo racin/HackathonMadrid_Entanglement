@@ -23,11 +23,14 @@ func GetTotalStrands() int {
 }
 
 func init() {
+	fmt.Println("USed?")
 	for i := 0; i < GetTotalStrands(); i++ {
 		ParityMemory[i] = make([]byte, int(MaxChunkSize))
+		//ParityMemory[i] = []byte{0}
 	}
 }
 
+/// TODO: Fix underflow naming errors on the nodes on the extreme of the lattice.
 func GetBackwardNeighbours(index int) (r, h, l int) {
 	// Check is it top, center or bottom in the lattice
 	// 1 -> Top, 0 -> Bottom, else Center
@@ -129,6 +132,17 @@ func entangle(datachunk []byte, index int) {
 	hParity := ParityMemory[h]
 	lParity := ParityMemory[l]
 
+	if index%5 == 0 {
+		fmt.Println(strconv.Itoa(rBack) + " _ " + strconv.Itoa(index))
+		fmt.Printf("%08b\n", rParity)
+		//fmt.Printf("%08b\n", hParity)
+		//fmt.Printf("%08b\n", lParity)
+	}
+
+	WriteChunkToFile(rParity, rBack, index)
+	WriteChunkToFile(hParity, hBack, index)
+	WriteChunkToFile(lParity, lBack, index)
+
 	rNext, _ := XORByteSlice(datachunk, rParity)
 	ParityMemory[r] = rNext
 
@@ -137,10 +151,6 @@ func entangle(datachunk []byte, index int) {
 
 	lNext, _ := XORByteSlice(datachunk, lParity)
 	ParityMemory[l] = lNext
-
-	WriteChunkToFile(rNext, rBack, index)
-	WriteChunkToFile(hNext, hBack, index)
-	WriteChunkToFile(lNext, lBack, index)
 }
 
 func EntangleFile(filePath string) error {
@@ -150,7 +160,7 @@ func EntangleFile(filePath string) error {
 	}
 	numChunks, err := ChunkFile(file)
 
-	for i := 0; i < numChunks; i++ {
+	for i := 1; i <= numChunks; i++ {
 		dataChunk, err := ReadChunk(ChunkDirectory + "d" + strconv.Itoa(i))
 		if err != nil {
 			return err

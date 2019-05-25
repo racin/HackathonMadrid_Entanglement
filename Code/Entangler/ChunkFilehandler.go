@@ -1,6 +1,7 @@
 package Entangler
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -35,4 +36,15 @@ func ReadChunk(filePath string) ([]byte, error) {
 	return output, nil
 }
 
-func RebuildFile()
+func RebuildFile(filePath string, Chunks ...[]byte) {
+	f, err := os.Create(ChunkDirectory + filePath)
+	if err != nil {
+		os.Exit(1)
+	}
+	w := bufio.NewWriter(f)
+
+	for i := 0; i < len(Chunks); i++ {
+		w.Write(Chunks[i])
+	}
+	w.Flush()
+}
