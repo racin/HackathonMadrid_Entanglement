@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strconv"
 )
 
 const (
@@ -123,6 +124,7 @@ func GetForwardNeighbours(index int) (r, h, l int) {
 
 func entangle(datachunk []byte, index int) {
 	r, h, l := GetMemoryPosition(index)
+	rBack, hBack, lBack := GetBackwardNeighbours(index)
 	rParity := ParityMemory[r]
 	hParity := ParityMemory[h]
 	lParity := ParityMemory[l]
@@ -136,20 +138,28 @@ func entangle(datachunk []byte, index int) {
 	lNext, _ := XORByteSlice(datachunk, lParity)
 	ParityMemory[l] = lNext
 
-	//WriteFile(rNext, index)
+	WriteChunkToFile(rNext, rBack, index)
+	WriteChunkToFile(hNext, hBack, index)
+	WriteChunkToFile(lNext, lBack, index)
 }
 
-func EntangleFile(filename string) {
-	// Input file
-	filePath := "../../resources/images/ArraySatelite.jpg"
+func EntangleFile(filePath string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		os.Exit(1)
 	}
-	ChunkFile(file)
+	numChunks, err := ChunkFile(file)
 
+	for i := 0; i < numChunks; i++ {
+		dataChunk, err := ReadChunk(ChunkDirectory + "d" + strconv.Itoa(i))
+		if err != nil {
+			return err
+		}
+		entangle(dataChunk, i)
+	}
 	// File -> Data chunks
 	// Datachunks ->
+	return nil
 }
 func XORByteSlice(a []byte, b []byte) ([]byte, error) {
 	if len(a) != len(b) {

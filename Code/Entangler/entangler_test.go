@@ -67,3 +67,8 @@ func TestGetMemoryPosition(t *testing.T) {
 	assert.Equal(t, 9, h, "Datablock 25: H position should be 9")
 	assert.Equal(t, 14, l, "Datablock 25: L position should be 14")
 }
+
+func TestEntangleFile(t *testing.T) {
+	filePath := "../../resources/images/swarm_logo.jpeg"
+	EntangleFile(filePath)
+}
