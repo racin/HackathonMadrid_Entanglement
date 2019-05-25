@@ -10,6 +10,7 @@ import (
 )
 
 const MaxChunkSize float64 = 3900
+const FileDirectory string = "../../files/"
 
 func ChunkFile(file *os.File) ([]byte, error) {
 	defer file.Close()
@@ -24,14 +25,14 @@ func ChunkFile(file *os.File) ([]byte, error) {
 
 		file.Read(currChunk)
 		filename := "d" + strconv.Itoa(int(i))
-		if _, err := os.Create(filename); err == nil {
+		if _, err := os.Create(FileDirectory + filename); err == nil {
 
 		} else {
 			fmt.Println("Fatal error ... " + err.Error())
 			os.Exit(1)
 		}
 
-		ioutil.WriteFile(filename, currChunk, os.ModeAppend)
+		ioutil.WriteFile(FileDirectory+filename, currChunk, os.ModeAppend)
 	}
 
 	return nil, nil

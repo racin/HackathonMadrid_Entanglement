@@ -49,23 +49,54 @@ func GetBackwardNeighbours(index int) (r, h, l int) {
 }
 
 func GetMemoryPosition(index int) (r, h, l int) {
-	// Check is it top, center or bottom in the lattice
-	// 1 -> Top, 0 -> Bottom, else Center
-	var nodePos = index % s
+	// Get the position in the ParityMemory array where the parity is located
+	// For now this will recursively call the GetBackwardNeighbours function
 
-	if nodePos == 1 {
-		r = index - (s * p) + int((math.Pow(float64(s), 2) - 1))
-		h = index - s
-		l = index - (s - 1)
-	} else if nodePos == 0 {
-		r = index - (s + 1)
-		h = index - s
-		l = index - (s * p) + int(math.Pow(float64(s-1), 2))
-	} else {
-		r = index - (s + 1)
-		h = index - s
-		l = index - (s - 1)
+	h = ((index - 1) % s) + s
+	r, l = index, index
+
+	for ; r > s; r, _, _ = GetBackwardNeighbours(r) {
 	}
+
+	switch r {
+	case 1:
+		r = 0
+		break
+	case 2:
+		r = 4
+		break
+	case 3:
+		r = 3
+		break
+	case 4:
+		r = 2
+		break
+	case 5:
+		r = 1
+		break
+	}
+
+	for ; l > s; _, _, l = GetBackwardNeighbours(l) {
+	}
+
+	switch l {
+	case 1:
+		l = 11
+		break
+	case 2:
+		l = 12
+		break
+	case 3:
+		l = 13
+		break
+	case 4:
+		l = 14
+		break
+	case 5:
+		l = 10
+		break
+	}
+
 	return
 }
 
@@ -105,7 +136,7 @@ func entangle(datachunk []byte, index int) {
 	lNext, _ := XORByteSlice(datachunk, lParity)
 	ParityMemory[l] = lNext
 
-	WriteFile(rNext, index)
+	//WriteFile(rNext, index)
 }
 
 func EntangleFile(filename string) {
