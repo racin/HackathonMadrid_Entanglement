@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"path/filepath"
+	"strconv"
 )
 
 const maxChunkSize float64 = 3900
@@ -21,8 +23,8 @@ func ChunkFile(file *os.File) ([]byte, error) {
 		currChunk := make([]byte, int(currChunkSize))
 
 		file.Read(currChunk)
-		filename := string(i) + "_" + file.Name()
-		if _, err := os.Create(string(i) + "_" + file.Name()); err == nil {
+		filename := strconv.Itoa(int(i)) + "_" + filepath.Base(file.Name())
+		if _, err := os.Create(filename); err == nil {
 
 		} else {
 			fmt.Println("Fatal error ... " + err.Error())
