@@ -27,7 +27,6 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Fprintf(w, "OK")
 
 	if _, err := os.Create(Entangler.TempDirectory + handler.Filename); err == nil {
 
@@ -36,6 +35,15 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 		os.Exit(1)
 	}
 	ioutil.WriteFile(Entangler.TempDirectory+handler.Filename, fileBytes, os.ModeAppend)
+
+	// Chunker & Entangler
+	Entangler.EntangleFile(Entangler.TempDirectory + handler.Filename)
+
+	// Upload
+	SwarmConnector.UploadAllChunks()
+
+	allFile, _ := ioutil.ReadFile("../retrives.txt")
+	fmt.Fprintf(w, string(allFile))
 }
 
 func setupRoutes() {
@@ -46,6 +54,5 @@ func setupRoutes() {
 
 func main() {
 	fmt.Println("Hello World")
-	//setupRoutes()
-	SwarmConnector.UploadAllChunks()
+	setupRoutes()
 }

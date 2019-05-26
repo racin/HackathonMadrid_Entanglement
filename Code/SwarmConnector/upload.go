@@ -7,43 +7,22 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	//bzzclient "https://github.com/ethereum/go-ethereum/tree/master/swarm/api/client/client.go"
 	bzzclient "github.com/ethereum/go-ethereum/swarm/api/client"
 )
 
-type FileStructure struct {
-	nameToHash map[string]string `json:"nametoHash"`
-}
+type FileStructure map[string]string
 
 const UploadDirectory = "../files/"
 
-func LoadFileStructure(path string) (*FileStructure, error) {
-
-	var fs FileStructure
-	conf, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = json.Unmarshal(conf, &fs); err != nil {
-		return nil, err
-	}
-
-	return &fs, nil
-}
-
-var (
-	newFile *os.File
-	err     error
-)
-
 func UploadAllChunks() {
 	//define Swarm client
-	client := bzzclient.NewClient("http://swarm.dappnode:8500")
+	client := bzzclient.NewClient("http://swarm.dappnode")
 	//Create file retrieval log info
 
-	newFile, err = os.Create(UploadDirectory + "retrives.txt")
+	newFile, err = os.Create("../retrives.txt")
 	//Read directory
 
 	files, err := ioutil.ReadDir(UploadDirectory)
@@ -54,6 +33,9 @@ func UploadAllChunks() {
 	var fs map[string]string = make(map[string]string)
 	for _, file := range files {
 		if file.Name() == ".DS_Store" {
+			continue
+		}
+		if file.Size() == 0 {
 			continue
 		}
 		path := UploadDirectory + file.Name()
@@ -73,9 +55,9 @@ func UploadAllChunks() {
 		}
 		//Log retrieval information
 
-		fs[file.Name()] = manifestHash
+		fs[filepath.Base(file.Name())] = manifestHash
 		byteArr, err := json.Marshal(fs)
-		ioutil.WriteFile("files/retrives.txt", byteArr, 0644)
+		ioutil.WriteFile("../retrives.txt", byteArr, 0644)
 	}
 
 }
