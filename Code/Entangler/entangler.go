@@ -132,13 +132,6 @@ func entangle(datachunk []byte, index int) {
 	hParity := ParityMemory[h]
 	lParity := ParityMemory[l]
 
-	if index%5 == 0 {
-		fmt.Println(strconv.Itoa(rBack) + " _ " + strconv.Itoa(index))
-		fmt.Printf("%08b\n", rParity)
-		//fmt.Printf("%08b\n", hParity)
-		//fmt.Printf("%08b\n", lParity)
-	}
-
 	WriteChunkToFile(rParity, rBack, index)
 	WriteChunkToFile(hParity, hBack, index)
 	WriteChunkToFile(lParity, lBack, index)

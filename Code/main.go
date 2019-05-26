@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 func uploadFile(w http.ResponseWriter, r *http.Request) {
@@ -46,13 +47,45 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(allFile))
 }
 
+func downloadFile(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Download Endpoint Hit")
+
+	keys, ok := r.URL.Query()["id"]
+
+	if !ok || len(keys[0]) < 1 {
+		fmt.Println("Param 'ID' is missing")
+		return
+	}
+
+	// Query()["key"] will return an array of items,
+	// we only want the single item.
+	key := keys[0]
+
+	fmt.Println("Url Param 'key' is: " + string(key))
+
+	bytes, _ := ioutil.ReadFile(Entangler.ChunkDirectory + "BC_Logo_.png")
+	/*if err := jpeg.Encode(buffer, *img, nil); err != nil {
+		log.Println("unable to encode image.")
+	}*/
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Content-Length", strconv.Itoa(len(bytes)))
+	if _, err := w.Write(bytes); err != nil {
+		fmt.Println("unable to write image.")
+	}
+
+	//fmt.Fprintf(w, string(bytes))
+}
+
 func setupRoutes() {
 	http.HandleFunc("/upload", uploadFile)
+	http.HandleFunc("/download", downloadFile)
 	err := http.ListenAndServe(":8081", nil)
 	fmt.Println(err.Error())
 }
 
 func main() {
 	fmt.Println("Hello World")
-	setupRoutes()
+	//setupRoutes()
+	SwarmConnector.DownloadAndReconstruct(1, 2, 3, 5, 6, 7)
 }
