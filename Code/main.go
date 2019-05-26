@@ -66,10 +66,10 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	strSplit := strings.Split(key, ",")
 	compare := 1
 	for i := 0; i < len(strSplit); i++ {
-		str, _ := strconv.Atoi(strSplit[i])
+		str, _ := strconv.Atoi(strSplit[i]) // 1,4,5
 		if str != compare {
 			boolArr = append(boolArr, false)
-			compare = str
+			compare = str + 1
 		} else {
 			boolArr = append(boolArr, true)
 			compare++

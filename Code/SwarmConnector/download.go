@@ -73,16 +73,19 @@ func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error
 	for i := 0; i < len(missingDataIndex); i++ {
 		br, _, _ := Entangler.GetBackwardNeighbours(missingDataIndex[i])
 		fr, _, _ := Entangler.GetForwardNeighbours(missingDataIndex[i])
-
+		fmt.Println("a")
 		//Getting filenames to XOR
 		values1 := []string{"p", strconv.Itoa(br), "_", strconv.Itoa(missingDataIndex[i])}
 		file1 := strings.Join(values1, "")
-		values2 := []string{"p", strconv.Itoa(fr), "_", strconv.Itoa(missingDataIndex[i])}
+		values2 := []string{"p", strconv.Itoa(missingDataIndex[i]), "_", strconv.Itoa(fr)}
 		file2 := strings.Join(values2, "")
-
+		fmt.Println(file1)
+		fmt.Println(file2)
 		HashBck := config[file1]
 		HashFwd := config[file2]
 
+		fmt.Println(HashBck)
+		fmt.Println(HashFwd)
 		fileA, _ := client.Download(HashBck, "")
 		fileB, _ := client.Download(HashFwd, "")
 
@@ -103,13 +106,21 @@ func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error
 		ioutil.WriteFile(Entangler.DownloadDirectory+"d"+strconv.Itoa(missingDataIndex[i]), Result, 0644)
 	}
 
-	/*for i := 0; i < len(allChunks); i++ {
-		dataChunk, err := Entangler.ReadChunk(Entangler.DownloadDirectory + "d" + strconv.Itoa(i))
-		if err != nil {
-			fmt.Println(err)
-		}
-		allChunks[i] = dataChunk
-	}*/
+	/*
+		var allChunkInOrder [][]byte
+		for i := 0; i < len(allChunks)+len(missingDataIndex); i++ {
+			missing := false
+			for j := 0; j < len(missingDataIndex); j++ {
+				if i+1 == missingDataIndex[j] {
+					missing = true
+					allChunkInOrder = append(allChunkInOrder, allChunks[j])
+					break
+				}
+			}
+			if missing == false {
+				allChunkInOrder = append(allChunkInOrder, allChunks[i])
+			}
+		}*/
 
 	Entangler.RebuildFile(filePath, allChunks...)
 
