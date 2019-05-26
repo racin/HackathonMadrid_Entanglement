@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func uploadFile(w http.ResponseWriter, r *http.Request) {
@@ -61,9 +62,23 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	// we only want the single item.
 	key := keys[0]
 
-	fmt.Println("Url Param 'key' is: " + string(key))
+	var boolArr []bool
+	strSplit := strings.Split(key, ",")
+	compare := 1
+	for i := 0; i < len(strSplit); i++ {
+		str, _ := strconv.Atoi(strSplit[i])
+		if str != compare {
+			boolArr = append(boolArr, false)
+			compare = str
+		} else {
+			boolArr = append(boolArr, true)
+			compare++
+		}
+	}
 
-	bytes, _ := ioutil.ReadFile(Entangler.ChunkDirectory + "BC_Logo_.png")
+	SwarmConnector.DownloadAndReconstruct(Entangler.ChunkDirectory+"reconstruct_swarm_logo.jpeg", boolArr...)
+
+	bytes, _ := ioutil.ReadFile(Entangler.ChunkDirectory + "reconstruct_swarm_logo.jpeg")
 	/*if err := jpeg.Encode(buffer, *img, nil); err != nil {
 		log.Println("unable to encode image.")
 	}*/
@@ -78,7 +93,7 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func setupRoutes() {
-	http.HandleFunc("/upload", uploadFile)
+	//http.HandleFunc("/upload", uploadFile)
 	http.HandleFunc("/download", downloadFile)
 	err := http.ListenAndServe(":8081", nil)
 	fmt.Println(err.Error())
@@ -86,6 +101,5 @@ func setupRoutes() {
 
 func main() {
 	fmt.Println("Hello World")
-	//setupRoutes()
-	SwarmConnector.DownloadAndReconstruct(1, 2, 3, 5, 6, 7)
+	setupRoutes()
 }
