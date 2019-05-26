@@ -39,8 +39,8 @@ var (
 func main() {
 
 	var path string
-	//define Swarm cliente
-	client := bzzclient.NewClient("http://127.0.0.1:8500")
+	//define Swarm client
+	client := bzzclient.NewClient("http://swarm.dappnode:8500")
 	//Create file retrieval log info
 
 	newFile, err = os.Create("files/retrives.txt")
