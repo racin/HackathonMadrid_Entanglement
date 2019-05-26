@@ -78,9 +78,9 @@ func TestEntangleFile(t *testing.T) {
 
 func TestEntangler(t *testing.T) {
 	// check hash of data block
-	data, _ := ReadChunk("../../testing/p7_13")
-	p1, _ := ReadChunk("../../testing/d1")
-	p2, _ := ReadChunk("../../testing/d7")
+	data, _ := ReadChunk("../../testing/d8")
+	p1, _ := ReadChunk("../../testing/p4_8")
+	p2, _ := ReadChunk("../../testing/p8_12")
 
 	// Xor two parities
 	rData, _ := XORByteSlice(p1, p2)

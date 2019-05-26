@@ -46,11 +46,58 @@ func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error
 
 	// Regular download .
 	//lastData := 1
-	var missingDataIndex []int
+	//var missingDataIndex []int
 	for i := 1; i <= len(dataIndexes); i++ {
 		if dataIndexes[i-1] == false {
-			missingDataIndex = append(missingDataIndex, i)
+			//missingDataIndex = append(missingDataIndex, i)
 			fmt.Print("Missing: " + strconv.Itoa(i) + "\n")
+			br, _, _ := Entangler.GetBackwardNeighbours(i)
+			fr, _, _ := Entangler.GetForwardNeighbours(i)
+			fmt.Println("a")
+			//Getting filenames to XOR
+			values1 := []string{"p", strconv.Itoa(br), "_", strconv.Itoa(i)}
+			file1 := strings.Join(values1, "")
+			values2 := []string{"p", strconv.Itoa(i), "_", strconv.Itoa(fr)}
+			file2 := strings.Join(values2, "")
+			fmt.Println(file1)
+			fmt.Println(file2)
+			HashBck := config[file1]
+			HashFwd := config[file2]
+
+			if HashBck == "" || HashFwd == "" {
+				hash := config["d"+strconv.Itoa(i)]
+				fmt.Println(hash)
+				dataChunk, err := client.Download(hash, "")
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+				fmt.Println(".OK??")
+				content, err := ioutil.ReadAll(dataChunk)
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+				fmt.Println("!!!!!!")
+				allChunks = append(allChunks, content)
+			} else {
+				fileA, _ := client.Download(HashBck, "")
+				fileB, _ := client.Download(HashFwd, "")
+
+				contentA, _ := ioutil.ReadAll(fileA)
+				contentB, _ := ioutil.ReadAll(fileB)
+				//fmt.Println(string(contentA)) // hello world
+				//fmt.Println(err) // hello world
+
+				//XOR PARITY CHUNKS
+				Result, _ := Entangler.XORByteSlice(contentA, contentB)
+
+				allChunks = append(allChunks, Result)
+			}
+
+			//Create Result file
+			//_, err = os.Create(Entangler.DownloadDirectory + "d" + strconv.Itoa(i))
+
+			//Write XOR content to file
+			//ioutil.WriteFile(Entangler.DownloadDirectory+"d"+strconv.Itoa(i), Result, 0644)
 			continue
 		}
 		fmt.Print("NOT Missing: " + strconv.Itoa(i) + "\n")
@@ -69,59 +116,8 @@ func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error
 		allChunks = append(allChunks, content)
 		//lastData = i + 1
 	}
-
-	for i := 0; i < len(missingDataIndex); i++ {
-		br, _, _ := Entangler.GetBackwardNeighbours(missingDataIndex[i])
-		fr, _, _ := Entangler.GetForwardNeighbours(missingDataIndex[i])
-		fmt.Println("a")
-		//Getting filenames to XOR
-		values1 := []string{"p", strconv.Itoa(br), "_", strconv.Itoa(missingDataIndex[i])}
-		file1 := strings.Join(values1, "")
-		values2 := []string{"p", strconv.Itoa(missingDataIndex[i]), "_", strconv.Itoa(fr)}
-		file2 := strings.Join(values2, "")
-		fmt.Println(file1)
-		fmt.Println(file2)
-		HashBck := config[file1]
-		HashFwd := config[file2]
-
-		fmt.Println(HashBck)
-		fmt.Println(HashFwd)
-		fileA, _ := client.Download(HashBck, "")
-		fileB, _ := client.Download(HashFwd, "")
-
-		contentA, _ := ioutil.ReadAll(fileA)
-		contentB, _ := ioutil.ReadAll(fileB)
-		//fmt.Println(string(contentA)) // hello world
-		//fmt.Println(err) // hello world
-
-		//XOR PARITY CHUNKS
-		Result, _ := Entangler.XORByteSlice(contentA, contentB)
-
-		allChunks = append(allChunks, Result)
-
-		//Create Result file
-		_, err = os.Create(Entangler.DownloadDirectory + "d" + strconv.Itoa(missingDataIndex[i]))
-
-		//Write XOR content to file
-		ioutil.WriteFile(Entangler.DownloadDirectory+"d"+strconv.Itoa(missingDataIndex[i]), Result, 0644)
-	}
-
-	/*
-		var allChunkInOrder [][]byte
-		for i := 0; i < len(allChunks)+len(missingDataIndex); i++ {
-			missing := false
-			for j := 0; j < len(missingDataIndex); j++ {
-				if i+1 == missingDataIndex[j] {
-					missing = true
-					allChunkInOrder = append(allChunkInOrder, allChunks[j])
-					break
-				}
-			}
-			if missing == false {
-				allChunkInOrder = append(allChunkInOrder, allChunks[i])
-			}
-		}*/
-
+	fmt.Println("Length of dataIndexes: " + string(strconv.Itoa(len(dataIndexes))))
+	fmt.Println("Length of allChunks: " + string(strconv.Itoa(len(allChunks))))
 	Entangler.RebuildFile(filePath, allChunks...)
 
 	return filePath, err

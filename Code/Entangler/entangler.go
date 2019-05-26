@@ -30,7 +30,7 @@ func init() {
 	}
 }
 
-/// TODO: Fix underflow naming errors on the nodes on the extreme of the lattice.
+// TODO: Fix underflow naming errors on the nodes on the extreme of the lattice.
 func GetBackwardNeighbours(index int) (r, h, l int) {
 	// Check is it top, center or bottom in the lattice
 	// 1 -> Top, 0 -> Bottom, else Center

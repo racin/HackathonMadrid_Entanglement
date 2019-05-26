@@ -63,13 +63,17 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 	key := keys[0]
 
 	var boolArr []bool
+	var length int = 36 // Hardcoded to 36 for the demo ..
 	strSplit := strings.Split(key, ",")
-	compare := 1
-	for i := 0; i < len(strSplit); i++ {
-		str, _ := strconv.Atoi(strSplit[i]) // 1,4,5
-		if str != compare {
+	compare := 0
+	for i := 1; i <= length; i++ {
+		if compare >= len(strSplit) {
 			boolArr = append(boolArr, false)
-			compare = str + 1
+			continue
+		}
+		str, _ := strconv.Atoi(strSplit[compare]) // 1,4,5
+		if i != str {
+			boolArr = append(boolArr, false)
 		} else {
 			boolArr = append(boolArr, true)
 			compare++
