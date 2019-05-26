@@ -2,12 +2,13 @@ package main
 
 //import requiered libraries
 import (
-   "fmt"
+//   "fmt"
     "io/ioutil"
     "strings"
     "strconv"
     "github.com/racin/HackathonMadrid_Entanglement/Code/Entangler"
     "encoding/json"
+    "os"
 
     //bzzclient "https://github.com/ethereum/go-ethereum/tree/master/swarm/api/client/client.go"
     bzzclient "github.com/ethereum/go-ethereum/swarm/api/client"
@@ -15,7 +16,7 @@ import (
 
 const file_to_retrieve = "D6"
 const index = 6
-
+var 	newFile *os.File
 
 
 type Config map[string]string
@@ -54,20 +55,28 @@ func main() {
 config,_ := LoadFileStructure("files/retrives.txt")
 HashBck := config[file1]
 HashFwd := config[file2]
+/*
  fmt.Println("F1:",HashBck)
  fmt.Println("F2:",HashFwd)
  fmt.Println("a", config["files/hello.txt"])
-
+*/
  //Retrive hashes
  client := bzzclient.NewClient("http://127.0.0.1:8500")
 
-      fileB, err := client.Download(HashBck, "")
-      fileF, err := client.Download(HashFwd, "")
+      fileA, err := client.Download(HashBck, "")
+      fileB, err := client.Download(HashFwd, "")
 //file, err := client.Download(config["files/hello.txt"], "")
-     content, err := ioutil.ReadAll(file)
-fmt.Println(string(content)) // hello world
-fmt.Println(err) // hello world
+     contentA, err := ioutil.ReadAll(fileA)
+     contentB, err := ioutil.ReadAll(fileB)
+//fmt.Println(string(contentA)) // hello world
+//fmt.Println(err) // hello world
+
 //XOR PARITY CHUNKS
-XORByteSlice(fileB,fileF)
+Result := XORByteSlice(contentA,contentB)
+//Create Result file
+//DataFile, err = os.Create("files/Result.txt")
+
+//Write XOR content to file
+ioutil.WriteFile("files/Results/Result.txt", Result, 0644)
 
 }
