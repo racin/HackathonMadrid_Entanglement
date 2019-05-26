@@ -42,7 +42,6 @@ func main() {
 	//define Swarm cliente
 	client := bzzclient.NewClient("http://127.0.0.1:8500")
 	//Create file retrieval log info
-	//    f, retrieves := os.Create("./$home/swarm/files/retrives.txt)
 
 	newFile, err = os.Create("files/retrives.txt")
 	//Read directory
@@ -72,18 +71,11 @@ func main() {
 			log.Fatal(err)
 		}
 		//Log retrieval information
-		f, err := os.OpenFile("files/retrives.txt", os.O_APPEND|os.O_WRONLY, 0644)
+
 		fs[file.Name()] = manifestHash
-		//fmt.Fprintln(f, file.Name())
-		/*f.WriteString(file.Name())
-		f.WriteString("=")
-		f.WriteString(manifestHash)
-		f.WriteString("\n")*/
-		//    fmt.Fprintln(f, manifestHash)
-		//  defer f.close()
-		//fmt.Println(manifestHash) // 2e0849490b62e706a5f1cb8e7219db7b01677f2a859bac4b5f522afd2a5f02c0
+    byteArr, err := json.Marshal(fs)
+    ioutil.WriteFile("files/retrives.txt", byteArr, 0644)
 	}
 
-	byteArr, err := json.Marshal(fs)
-	ioutil.WriteFile("files/retrives.txt", byteArr, 0644)
+
 }
