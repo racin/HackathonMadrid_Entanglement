@@ -19,7 +19,7 @@ const UploadDirectory = "../files/"
 
 func UploadAllChunks() {
 	//define Swarm client
-	client := bzzclient.NewClient("http://swarm.dappnode")
+	client := bzzclient.NewClient("https://swarm-gateways.net")
 	//Create file retrieval log info
 
 	newFile, err = os.Create("../retrives.txt")

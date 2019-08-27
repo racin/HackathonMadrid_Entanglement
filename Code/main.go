@@ -97,7 +97,7 @@ func downloadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func setupRoutes() {
-	//http.HandleFunc("/upload", uploadFile)
+	http.HandleFunc("/upload", uploadFile)
 	http.HandleFunc("/download", downloadFile)
 	err := http.ListenAndServe(":8081", nil)
 	fmt.Println(err.Error())

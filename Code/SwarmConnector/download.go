@@ -39,7 +39,7 @@ func LoadFileStructure(path string) (map[string]string, error) {
 
 func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error) {
 
-	client := bzzclient.NewClient("http://swarm.dappnode")
+	client := bzzclient.NewClient("https://swarm-gateways.net")
 	config, _ := LoadFileStructure("../retrives.txt")
 	var allChunks [][]byte
 	var err error
@@ -53,7 +53,6 @@ func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error
 			fmt.Print("Missing: " + strconv.Itoa(i) + "\n")
 			br, _, _ := Entangler.GetBackwardNeighbours(i)
 			fr, _, _ := Entangler.GetForwardNeighbours(i)
-			fmt.Println("a")
 			//Getting filenames to XOR
 			values1 := []string{"p", strconv.Itoa(br), "_", strconv.Itoa(i)}
 			file1 := strings.Join(values1, "")
@@ -71,12 +70,10 @@ func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error
 				if err != nil {
 					fmt.Println(err.Error())
 				}
-				fmt.Println(".OK??")
 				content, err := ioutil.ReadAll(dataChunk)
 				if err != nil {
 					fmt.Println(err.Error())
 				}
-				fmt.Println("!!!!!!")
 				allChunks = append(allChunks, content)
 			} else {
 				fileA, _ := client.Download(HashBck, "")
@@ -107,12 +104,10 @@ func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		fmt.Println(".OK??")
 		content, err := ioutil.ReadAll(dataChunk)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		fmt.Println("!!!!!!")
 		allChunks = append(allChunks, content)
 		//lastData = i + 1
 	}
