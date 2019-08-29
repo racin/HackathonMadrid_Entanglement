@@ -25,6 +25,23 @@ type Downloader struct {
 	content map[string][]byte
 }
 
+type DownloadPool struct {
+	lock     sync.Mutex        // Locking
+	resource chan *Downloader  // Channel to obtain resource from the pool
+	content  map[string][]byte // Shared map of retrieved blocks
+	Capacity int               // Maximum capacity of the pool.
+	Count    int               // Current count of allocated resources.
+}
+
+func NewDownloadPool(capacity int) *DownloadPool {
+	return &DownloadPool{
+		resource:       make(chan *Downloader, capacity),
+		content:		make(map[string][byte])
+		Capacity:     	capacity,
+		Count:			0
+	}
+}
+
 type Config map[string]string
 
 func LoadFileStructure(path string) (map[string]string, error) {
