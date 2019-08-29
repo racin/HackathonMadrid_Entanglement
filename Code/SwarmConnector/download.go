@@ -20,6 +20,11 @@ const index = 6
 var newFile *os.File
 var err error
 
+type Downloader struct {
+	client  *bzzclient.Client
+	content map[string][]byte
+}
+
 type Config map[string]string
 
 func LoadFileStructure(path string) (map[string]string, error) {
@@ -35,6 +40,25 @@ func LoadFileStructure(path string) (map[string]string, error) {
 	}
 
 	return fs, nil
+}
+
+/// Strategy 1: Hierarchical
+/// Strategy 2: Round-robin
+func (d *Downloader) AsyncDownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error) {
+	file, err := d.client.Download("Hash", "Path")
+	if err != nil {
+
+	}
+}
+
+func (d *Downloader) CanReconstruct(dataIndex string) {
+	br, bh, bl := Entangler.GetBackwardNeighbours(dataIndex) // Right, Horizontal, Left
+	fr, fh, fl := Entangler.GetForwardNeighbours(dataIndex)
+
+	return d.content[dataIndex] != nil ||
+		(d.content[br] != nil && d.content[fr] != nil) ||
+		(d.content[bh] != nil && d.content[fh] != nil) ||
+		(d.content[bl] != nil && d.content[fl] != nil)
 }
 
 func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error) {
