@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	//bzzclient "https://github.com/ethereum/go-ethereum/tree/master/swarm/api/client/client.go"
 	bzzclient "github.com/ethereum/go-ethereum/swarm/api/client"
@@ -21,8 +22,7 @@ var newFile *os.File
 var err error
 
 type Downloader struct {
-	client  *bzzclient.Client
-	content map[string][]byte
+	client *bzzclient.Client
 }
 
 type DownloadPool struct {
@@ -30,15 +30,60 @@ type DownloadPool struct {
 	resource chan *Downloader  // Channel to obtain resource from the pool
 	content  map[string][]byte // Shared map of retrieved blocks
 	Capacity int               // Maximum capacity of the pool.
-	Count    int               // Current count of allocated resources.
+	count    int               // Current count of allocated resources.
+	Filepath string            // Final output location
+	endpoint string
 }
 
-func NewDownloadPool(capacity int) *DownloadPool {
+func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPool {
 	return &DownloadPool{
-		resource:       make(chan *Downloader, capacity),
-		content:		make(map[string][byte])
-		Capacity:     	capacity,
-		Count:			0
+		resource: make(chan *Downloader, capacity),
+		content:  make(map[string][]byte),
+		Capacity: capacity,
+		count:    0,
+		Filepath: filepath,
+		endpoint: endpoint,
+	}
+}
+
+// Drain drains the pool until it has no more than n resources
+func (p *DownloadPool) Drain(n int) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	for len(p.resource) > n {
+		<-p.resource
+		p.count--
+	}
+}
+
+// Reserve is blocking until it returns an available tree
+// it reuses free trees or creates a new one if size is not reached
+// TODO: should use a context here
+func (p *DownloadPool) reserve() *Downloader {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	var d *Downloader
+	if p.count == p.Capacity {
+		return <-p.resource
+	}
+	select {
+	case d = <-p.resource:
+	default:
+		d = newDownloader(p.endpoint)
+		p.count++
+	}
+	return d
+}
+
+// release gives back a Downloader to the pool
+func (p *DownloadPool) release(d *Downloader) {
+	p.resource <- d // can never fail ...
+}
+
+// Initizalites a new downloader
+func newDownloader(endpoint string) *Downloader {
+	return &Downloader{
+		client: bzzclient.NewClient(endpoint),
 	}
 }
 
@@ -60,26 +105,29 @@ func LoadFileStructure(path string) (map[string]string, error) {
 }
 
 /// Strategy 1: Hierarchical
-/// Strategy 2: Round-robin
-func (d *Downloader) AsyncDownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error) {
-	file, err := d.client.Download("Hash", "Path")
+/// Strategy 2: Round-robin (Tail latency)
+func (d *Downloader) AsyncDownloadAndReconstruct(dp DownloadPool, dataIndex string) error {
+	if d.CanReconstruct(dataIndex) {
+
+	}
+
+	file, err := d.client.Download(dp.con)
 	if err != nil {
 
 	}
 }
 
-func (d *Downloader) CanReconstruct(dataIndex string) {
+func (d *Downloader) CanReconstruct(dp DownloadPool, dataIndex string) {
 	br, bh, bl := Entangler.GetBackwardNeighbours(dataIndex) // Right, Horizontal, Left
 	fr, fh, fl := Entangler.GetForwardNeighbours(dataIndex)
 
-	return d.content[dataIndex] != nil ||
-		(d.content[br] != nil && d.content[fr] != nil) ||
-		(d.content[bh] != nil && d.content[fh] != nil) ||
-		(d.content[bl] != nil && d.content[fl] != nil)
+	return dp.content[dataIndex] != nil ||
+		(dp.content[br] != nil && dp.content[fr] != nil) ||
+		(dp.content[bh] != nil && dp.content[fh] != nil) ||
+		(dp.content[bl] != nil && dp.content[fl] != nil)
 }
 
 func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error) {
-
 	client := bzzclient.NewClient("https://swarm-gateways.net")
 	config, _ := LoadFileStructure("../retrives.txt")
 	var allChunks [][]byte
