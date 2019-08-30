@@ -106,7 +106,7 @@ func LoadFileStructure(path string) (map[string]string, error) {
 
 /// Strategy 1: Hierarchical
 /// Strategy 2: Round-robin (Tail latency)
-func (d *Downloader) AsyncDownloadAndReconstruct(dp DownloadPool, dataIndex string) error {
+func (d *Downloader) AsyncDownloadAndReconstruct(content map[string][]byte, dataIndex string) error {
 	if d.CanReconstruct(dataIndex) {
 
 	}
@@ -117,14 +117,26 @@ func (d *Downloader) AsyncDownloadAndReconstruct(dp DownloadPool, dataIndex stri
 	}
 }
 
-func (d *Downloader) CanReconstruct(dp DownloadPool, dataIndex string) {
+func StringConvertBlockIndex(index ...int) string {
+	lenI := len(index)
+
+	switch lenI {
+	case 1:
+		return strconv.Itoa(index[0])
+	case 2:
+		return "p" + strconv.Itoa(index[0]) + strconv.Itoa(index[1])
+	default:
+		return ""
+	}
+}
+func (d *Downloader) CanReconstruct(content *map[string][]byte, dataIndex string) {
 	br, bh, bl := Entangler.GetBackwardNeighbours(dataIndex) // Right, Horizontal, Left
 	fr, fh, fl := Entangler.GetForwardNeighbours(dataIndex)
 
-	return dp.content[dataIndex] != nil ||
-		(dp.content[br] != nil && dp.content[fr] != nil) ||
-		(dp.content[bh] != nil && dp.content[fh] != nil) ||
-		(dp.content[bl] != nil && dp.content[fl] != nil)
+	return (*content)[dataIndex] != nil ||
+		((*content)[br] != nil && (*content)[fr] != nil) ||
+		((*content)[bh] != nil && (*content)[fh] != nil) ||
+		((*content)[bl] != nil && (*content)[fl] != nil)
 }
 
 func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error) {
