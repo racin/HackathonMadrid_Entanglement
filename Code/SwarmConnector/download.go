@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/racin/HackathonMadrid_Entanglement/Code/Entangler"
+	"github.com/racin/HackathonMadrid_Entanglement/Code/Entangler/data"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -26,19 +27,19 @@ type Downloader struct {
 }
 
 type DownloadPool struct {
-	lock     sync.Mutex        // Locking
-	resource chan *Downloader  // Channel to obtain resource from the pool
-	content  map[string][]byte // Shared map of retrieved blocks
-	Capacity int               // Maximum capacity of the pool.
-	count    int               // Current count of allocated resources.
-	Filepath string            // Final output location
+	lock     sync.Mutex       // Locking
+	resource chan *Downloader // Channel to obtain resource from the pool
+	lattice  *data.Lattice    // Shared map of retrieved blocks
+	Capacity int              // Maximum capacity of the pool.
+	count    int              // Current count of allocated resources.
+	Filepath string           // Final output location
 	endpoint string
 }
 
 func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPool {
 	return &DownloadPool{
 		resource: make(chan *Downloader, capacity),
-		content:  make(map[string][]byte),
+		lattice:  data.NewLattice(500, Entangler.Alpha, Entangler.S, Entangler.P),
 		Capacity: capacity,
 		count:    0,
 		Filepath: filepath,
