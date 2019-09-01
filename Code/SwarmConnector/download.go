@@ -129,6 +129,7 @@ func StringConvertBlockIndex(index ...int) string {
 		return ""
 	}
 }
+
 func (d *Downloader) CanReconstruct(content *map[string][]byte, dataIndex string) {
 	br, bh, bl := Entangler.GetBackwardNeighbours(dataIndex) // Right, Horizontal, Left
 	fr, fh, fl := Entangler.GetForwardNeighbours(dataIndex)
