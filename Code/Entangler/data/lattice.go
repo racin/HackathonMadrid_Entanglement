@@ -2,16 +2,16 @@ package data
 
 // s Horizontal strands. p Helical strands
 type Lattice struct {
-	DataNodes   []DataBlock
-	ParityNodes []ParityBlock
+	DataNodes   []*DataBlock
+	ParityNodes []*ParityBlock
 	Alpha       int
 	S, P        int
 }
 
 func NewLattice(esize, alpha, s, p int) *Lattice {
 	return &Lattice{
-		DataNodes:   make([]DataBlock, esize),
-		ParityNodes: make([]ParityBlock, alpha*esize),
+		DataNodes:   make([]*DataBlock, esize),
+		ParityNodes: make([]*ParityBlock, alpha*esize),
 		Alpha:       alpha,
 		S:           s,
 		P:           p,
