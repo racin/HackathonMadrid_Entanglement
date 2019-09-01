@@ -8,18 +8,19 @@ import (
 )
 
 const (
-	rightStrands      = 5
-	leftStrands       = 5
-	horizontalStrands = 5
+	RightStrands      = 5
+	LeftStrands       = 5
+	HorizontalStrands = 5
+	Alpha             = 3
 )
 
-var s = int(horizontalStrands)
-var p = int(rightStrands)
+var S = int(HorizontalStrands)
+var P = int(RightStrands)
 
-var ParityMemory [rightStrands + leftStrands + horizontalStrands][]byte
+var ParityMemory [RightStrands + LeftStrands + HorizontalStrands][]byte
 
 func GetTotalStrands() int {
-	return rightStrands + leftStrands + horizontalStrands
+	return RightStrands + LeftStrands + HorizontalStrands
 }
 
 func init() {
@@ -34,20 +35,20 @@ func init() {
 func GetBackwardNeighbours(index int) (r, h, l int) {
 	// Check is it top, center or bottom in the lattice
 	// 1 -> Top, 0 -> Bottom, else Center
-	var nodePos = index % s
+	var nodePos = index % S
 
 	if nodePos == 1 {
-		r = index - (s * p) + int((math.Pow(float64(s), 2) - 1))
-		h = index - s
-		l = index - (s - 1)
+		r = index - (S * P) + int((math.Pow(float64(S), 2) - 1))
+		h = index - S
+		l = index - (S - 1)
 	} else if nodePos == 0 {
-		r = index - (s + 1)
-		h = index - s
-		l = index - (s * p) + int(math.Pow(float64(s-1), 2))
+		r = index - (S + 1)
+		h = index - S
+		l = index - (S * P) + int(math.Pow(float64(S-1), 2))
 	} else {
-		r = index - (s + 1)
-		h = index - s
-		l = index - (s - 1)
+		r = index - (S + 1)
+		h = index - S
+		l = index - (S - 1)
 	}
 	return
 }
@@ -56,10 +57,10 @@ func GetMemoryPosition(index int) (r, h, l int) {
 	// Get the position in the ParityMemory array where the parity is located
 	// For now this will recursively call the GetBackwardNeighbours function
 
-	h = ((index - 1) % s) + s
+	h = ((index - 1) % S) + S
 	r, l = index, index
 
-	for ; r > s; r, _, _ = GetBackwardNeighbours(r) {
+	for ; r > S; r, _, _ = GetBackwardNeighbours(r) {
 	}
 
 	switch r {
@@ -80,7 +81,7 @@ func GetMemoryPosition(index int) (r, h, l int) {
 		break
 	}
 
-	for ; l > s; _, _, l = GetBackwardNeighbours(l) {
+	for ; l > S; _, _, l = GetBackwardNeighbours(l) {
 	}
 
 	switch l {
@@ -107,20 +108,20 @@ func GetMemoryPosition(index int) (r, h, l int) {
 func GetForwardNeighbours(index int) (r, h, l int) {
 	// Check is it top, center or bottom in the lattice
 	// 1 -> Top, 0 -> Bottom, else Center
-	var nodePos = index % s
+	var nodePos = index % S
 
 	if nodePos == 1 {
-		r = index + s + 1
-		h = index + s
-		l = index + (s * p) - int(math.Pow(float64(s-1), 2))
+		r = index + S + 1
+		h = index + S
+		l = index + (S * P) - int(math.Pow(float64(S-1), 2))
 	} else if nodePos == 0 {
-		r = index + (s * p) - int(math.Pow(float64(s), 2)-1)
-		h = index + s
-		l = index + s - 1
+		r = index + (S * P) - int(math.Pow(float64(S), 2)-1)
+		h = index + S
+		l = index + S - 1
 	} else {
-		r = index + s + 1
-		h = index + s
-		l = index + (s - 1)
+		r = index + S + 1
+		h = index + S
+		l = index + (S - 1)
 	}
 	return
 }

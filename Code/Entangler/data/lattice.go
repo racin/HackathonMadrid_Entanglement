@@ -4,32 +4,32 @@ package data
 type Lattice struct {
 	DataNodes   []DataBlock
 	ParityNodes []ParityBlock
-	alpha       int
-	s, p        int
+	Alpha       int
+	S, P        int
 }
 
-func newLattice(esize, alpha, s, p int) *Lattice {
+func NewLattice(esize, alpha, s, p int) *Lattice {
 	return &Lattice{
 		DataNodes:   make([]DataBlock, esize),
 		ParityNodes: make([]ParityBlock, alpha*esize),
-		alpha:       alpha,
-		s:           s,
-		p:           p,
+		Alpha:       alpha,
+		S:           s,
+		P:           p,
 	}
 }
 
 type DataBlock struct {
-	left     []ParityBlock
-	right    []ParityBlock
-	data     []byte
-	position int
+	Left     []ParityBlock
+	Right    []ParityBlock
+	Data     []byte
+	Position int
 }
 
 type ParityBlock struct {
-	left   DataBlock
-	right  DataBlock
-	strand int
-	class  StrandClass
+	Left   DataBlock
+	Right  DataBlock
+	Strand int
+	Class  StrandClass
 }
 
 type StrandClass int
