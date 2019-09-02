@@ -41,16 +41,16 @@ func (l *Lattice) HierarchicalRepair(block *Block) *Block {
 
 	// Data repair
 
-	if data, ok := block.Base.(*Data); ok {
+	if d, ok := block.Base.(*Data); ok {
 		if data == nil {
 			return block
 		}
 		strandMatch := make([]int, Alpha)
 		for i := 0; i < Alpha; i++ {
-			if data.Left[i] != nil {
+			if d.Left[i] != nil {
 				strandMatch[i] = strandMatch[i] + 1
 			}
-			if data.Right[i] == nil {
+			if d.Right[i] == nil {
 				strandMatch[i] = strandMatch[i] + 1
 			}
 		}
@@ -70,7 +70,7 @@ func (l *Lattice) HierarchicalRepair(block *Block) *Block {
 			bLeft := l.HierarchicalRepair(&Block{Base: data.Left, Data: nil})
 			bRight := l.HierarchicalRepair(&Block{Base: data.Right, Data: nil})
 		}
-		return &Block{Base: data, Data: nil}
+		return &Block{Base: d, Data: nil}
 
 	}
 
@@ -89,17 +89,17 @@ func (l *Lattice) XORBlocks(left *Block, right *Block) (*Block, error) {
 	var retBlock *Block
 	var err error
 	var ok bool
-	var data *Data
+	var d *data.DataBlock
 	var p1, p2 *Parity
 
-	data, ok = left.Base.(*Data)
+	d, ok = left.Base.(*data.DataBlock)
 	if !ok {
 		p1, ok = left.Base.(*Parity)
 		if !ok {
 			return nil, errors.New("cannot type cast left block")
 		}
 	} else {
-		data, ok = right.Base.(*Data)
+		d, ok = right.Base.(*data.DataBlock)
 		if !ok {
 			p2, ok = right.Base.(*Parity)
 			if !ok {
@@ -108,28 +108,31 @@ func (l *Lattice) XORBlocks(left *Block, right *Block) (*Block, error) {
 		}
 	}
 
-	if p1 != nil && data != nil {
-		// Two parities
-		if p1.Right != p2.Left {
-			return nil, errors.New("parity blocks do not match")
+	if p1 != nil && d != nil {
+		// Left parity and data block. Can reconstruct right parity
+		if p1.Right != d {
+			return nil, errors.New("left parity is not associated with data block")
 		}
 
-		p1.Right.Data, err = XORByteSlice(p1.Data, p2.Data)
+		d.Right[p1.Class].Data, err = XORByteSlice(p1.Data, d.Data)
 		if err != nil {
 			return nil, err
 		}
 
-	} else if p2 != nil && data != nil {
-		// Two parities
-		if p1.Right != p2.Left {
-			return nil, errors.New("parity blocks do not match")
+		return &Block{Base: d.Right[p1.Class]}, nil
+
+	} else if p2 != nil && d != nil {
+		// Right parity and data block. Can reconstruct left parity
+		if p2.Left != d {
+			return nil, errors.New("right parity is not associated with data block")
 		}
 
-		p1.Right.Data, err = XORByteSlice(p1.Data, p2.Data)
+		d.Left[p2.Class].Data, err = XORByteSlice(d.Data, p2.Data)
 		if err != nil {
 			return nil, err
 		}
 
+		return &Block{Base: d.Left[p2.Class]}, nil
 	} else {
 		// Two parities
 		if p1.Right != p2.Left {
@@ -143,8 +146,6 @@ func (l *Lattice) XORBlocks(left *Block, right *Block) (*Block, error) {
 
 		return &Block{Base: p1.Right}, nil
 	}
-
-	return
 }
 func (l *Lattice) RoundrobinRepair(block *data.LatticeBlock) {
 
