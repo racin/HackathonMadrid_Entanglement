@@ -4,6 +4,7 @@ package data
 type Lattice struct {
 	DataNodes   []*DataBlock
 	ParityNodes []*ParityBlock
+	Blocks      []*LatticeBlock
 	Alpha       int
 	S, P        int
 }
@@ -18,14 +19,20 @@ func NewLattice(esize, alpha, s, p int) *Lattice {
 	}
 }
 
+type LatticeBlock struct {
+	Data []byte
+	Base interface{}
+}
+
 type DataBlock struct {
+	LatticeBlock
 	Left     []ParityBlock
 	Right    []ParityBlock
-	Data     []byte
 	Position int
 }
 
 type ParityBlock struct {
+	LatticeBlock
 	Left   DataBlock
 	Right  DataBlock
 	Strand int

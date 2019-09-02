@@ -6,6 +6,9 @@ import (
 )
 
 type Lattice data.Lattice
+type Block data.LatticeBlock
+type Data data.DataBlock
+type Parity data.ParityBlock
 
 func (l *Lattice) Reconstruct() ([]byte, error) {
 	out := make([]byte, len(l.DataNodes))
@@ -17,4 +20,29 @@ func (l *Lattice) Reconstruct() ([]byte, error) {
 	}
 
 	return out, nil
+}
+
+func (l *Lattice) HierarchicalRepair(block *Block) *Block {
+	if block == nil {
+		return nil
+	}
+
+	// Data repair
+
+	if data, ok := block.Base.(*Data); ok {
+		return &Block{Base: data, Data: nil}
+
+	}
+
+	// Parity repair
+
+	if parity, ok := block.Base.(*Parity); ok {
+		return &Block{Base: parity, Data: nil}
+	}
+
+	return nil
+}
+
+func (l *Lattice) RoundrobinRepair(block *data.LatticeBlock) {
+
 }
