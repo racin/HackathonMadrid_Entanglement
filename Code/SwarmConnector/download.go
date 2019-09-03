@@ -23,7 +23,7 @@ var newFile *os.File
 var err error
 
 type Downloader struct {
-	client *bzzclient.Client
+	Client *bzzclient.Client
 }
 
 type DownloadPool struct {
@@ -39,7 +39,7 @@ type DownloadPool struct {
 }
 
 func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPool {
-	return &DownloadPool{
+	d := &DownloadPool{
 		resource: make(chan *Downloader, capacity),
 		lattice:  data.NewLattice(500, Entangler.Alpha, Entangler.S, Entangler.P),
 		Capacity: capacity,
@@ -47,6 +47,22 @@ func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPo
 		Filepath: filepath,
 		endpoint: endpoint,
 	}
+	go func() {
+		select {
+		case request := <-d.lattice.DataRequest:
+			// look up hash of requested block
+			dl, err := d.reserve().Client.Download(request.Key, "")
+			if err != nil {
+				// Issue repair
+			}
+			contentA, err := ioutil.ReadAll(dl)
+			if err != nil {
+				// Fatal error
+			}
+			d.lattice.DataStream <- &data.DownloadResponse{DownloadRequest: request, Value: contentA}
+		}
+	}()
+	return d
 }
 
 // Drain drains the pool until it has no more than n resources

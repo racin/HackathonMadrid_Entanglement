@@ -5,6 +5,6 @@ type DownloadRequest struct {
 }
 
 type DownloadResponse struct {
-	DownloadRequest
+	*DownloadRequest
 	Value []byte
 }

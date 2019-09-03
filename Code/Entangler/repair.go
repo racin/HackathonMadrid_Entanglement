@@ -10,6 +10,14 @@ type Block data.LatticeBlock
 type Data data.DataBlock
 type Parity data.ParityBlock
 
+func (l *Lattice) Download(block *Block) {
+	if d, ok := block.Base.(*Data); ok {
+	} else if p, ok := block.Base.(*Parity); ok {
+	} else {
+		return
+	}
+
+}
 func (l *Lattice) Reconstruct() ([]byte, error) {
 	out := make([]byte, len(l.DataNodes))
 	for i := 0; i < len(l.DataNodes); i++ {
