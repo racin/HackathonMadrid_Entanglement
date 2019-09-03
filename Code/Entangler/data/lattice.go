@@ -26,15 +26,15 @@ type LatticeBlock struct {
 
 type DataBlock struct {
 	LatticeBlock
-	Left     []ParityBlock
-	Right    []ParityBlock
+	Left     []*ParityBlock
+	Right    []*ParityBlock
 	Position int
 }
 
 type ParityBlock struct {
 	LatticeBlock
-	Left   DataBlock
-	Right  DataBlock
+	Left   *DataBlock
+	Right  *DataBlock
 	Strand int
 	Class  StrandClass
 }
