@@ -7,6 +7,8 @@ type Lattice struct {
 	Blocks      []*LatticeBlock
 	Alpha       int
 	S, P        int
+	DataRequest chan *DownloadRequest
+	DataStream  chan *DownloadResponse
 }
 
 func NewLattice(esize, alpha, s, p int) *Lattice {

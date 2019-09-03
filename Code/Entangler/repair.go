@@ -42,7 +42,7 @@ func (l *Lattice) HierarchicalRepair(block *Block) *Block {
 	// Data repair
 
 	if d, ok := block.Base.(*Data); ok {
-		if data == nil {
+		if d == nil {
 			return block
 		}
 		strandMatch := make([]int, Alpha)
@@ -50,7 +50,7 @@ func (l *Lattice) HierarchicalRepair(block *Block) *Block {
 			if d.Left[i] != nil {
 				strandMatch[i] = strandMatch[i] + 1
 			}
-			if d.Right[i] == nil {
+			if d.Right[i] != nil {
 				strandMatch[i] = strandMatch[i] + 1
 			}
 		}
@@ -62,22 +62,42 @@ func (l *Lattice) HierarchicalRepair(block *Block) *Block {
 		// If its 2 we already have the parities we need.
 		if mC == 2 {
 			// XOR Left & Right
+			block, _ = l.XORBlocks(&Block{Base: d.Left[mI]}, &Block{Base: d.Right[mI]})
 		} else if mC == 1 {
 			// Missing left or right. Repair one of them.
-			b := l.HierarchicalRepair(&Block{Base: data.Left, Data: nil})
+			if d.Left[mI] != nil {
+				// Repair right
+				l.HierarchicalRepair(&Block{Base: data.Right, Data: nil})
+			} else {
+				// Repair left
+				l.HierarchicalRepair(&Block{Base: data.Left, Data: nil})
+			}
+			block, _ = l.XORBlocks(&Block{Base: d.Left[mI]}, &Block{Base: d.Right[mI]})
+
 			// XOR recovered with already existing
 		} else {
-			bLeft := l.HierarchicalRepair(&Block{Base: data.Left, Data: nil})
-			bRight := l.HierarchicalRepair(&Block{Base: data.Right, Data: nil})
+			l.HierarchicalRepair(&Block{Base: data.Right, Data: nil})
+			l.HierarchicalRepair(&Block{Base: data.Left, Data: nil})
+
+			block, _ = l.XORBlocks(&Block{Base: d.Left[mI]}, &Block{Base: d.Right[mI]})
 		}
 		return &Block{Base: d, Data: nil}
 
-	}
+	} else if p, ok := block.Base.(*Parity); ok {
+		// Parity repair
+		if p == nil {
+			return block
+		}
 
-	// Parity repair
+		// Try to request parity
 
-	if parity, ok := block.Base.(*Parity); ok {
-		return &Block{Base: parity, Data: block.Data}
+		if p.Left.Data != nil && p.Left.Left[p.Strand].Data != nil {
+			block, _ = l.XORBlocks(&Block{Base: p.Left}, &Block{Base: p.Left.Left[p.Strand]})
+		} else if p.Right.Data != nil && p.Right.Right[p.Strand].Data != nil {
+			block, _ = l.XORBlocks(&Block{Base: p.Right.Right[p.Strand]}, &Block{Base: p.Right})
+		}
+
+		return &Block{Base: d, Data: nil}
 	}
 
 	return block

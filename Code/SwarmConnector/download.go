@@ -27,13 +27,15 @@ type Downloader struct {
 }
 
 type DownloadPool struct {
-	lock     sync.Mutex       // Locking
-	resource chan *Downloader // Channel to obtain resource from the pool
-	lattice  *data.Lattice    // Shared map of retrieved blocks
-	Capacity int              // Maximum capacity of the pool.
-	count    int              // Current count of allocated resources.
-	Filepath string           // Final output location
-	endpoint string
+	lock         sync.Mutex       // Locking
+	resource     chan *Downloader // Channel to obtain resource from the pool
+	lattice      *data.Lattice    // Shared map of retrieved blocks
+	Capacity     int              // Maximum capacity of the pool.
+	count        int              // Current count of allocated resources.
+	Filepath     string           // Final output location
+	endpoint     string
+	datarequests chan *data.DownloadRequest
+	datastream   chan *data.DownloadResponse
 }
 
 func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPool {
