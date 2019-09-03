@@ -41,6 +41,12 @@ type ParityBlock struct {
 	Class  StrandClass
 }
 
+type LBlock struct {
+	ParityBlock
+	DataBlock
+	parity bool
+}
+
 type StrandClass int
 
 const (
