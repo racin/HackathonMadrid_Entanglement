@@ -2,9 +2,10 @@ package data
 
 // s Horizontal strands. p Helical strands
 type Lattice struct {
-	DataNodes   []*DataBlock
-	ParityNodes []*ParityBlock
-	Blocks      []*LatticeBlock
+	// DataNodes   []*DataBlock
+	// ParityNodes []*ParityBlock
+	Blocks      []*Block
+	NumBlocks   int
 	Alpha       int
 	S, P        int
 	DataRequest chan *DownloadRequest
@@ -12,12 +13,14 @@ type Lattice struct {
 }
 
 func NewLattice(esize, alpha, s, p int) *Lattice {
+	numBlocks := (1 + alpha) * esize
 	return &Lattice{
-		DataNodes:   make([]*DataBlock, esize),
-		ParityNodes: make([]*ParityBlock, alpha*esize),
-		Alpha:       alpha,
-		S:           s,
-		P:           p,
+		// DataNodes:   make([]*DataBlock, esize),
+		// ParityNodes: make([]*ParityBlock, alpha*esize),
+		Blocks: make([]*Block, numBlocks),
+		Alpha:  alpha,
+		S:      s,
+		P:      p,
 	}
 }
 
@@ -41,10 +44,13 @@ type ParityBlock struct {
 	Class  StrandClass
 }
 
-type LBlock struct {
-	ParityBlock
-	DataBlock
-	parity bool
+type Block struct {
+	Left     []*Block
+	Right    []*Block
+	Position int
+	Data     []byte
+	IsParity bool
+	Class    StrandClass
 }
 
 type StrandClass int

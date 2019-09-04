@@ -6,25 +6,23 @@ import (
 )
 
 type Lattice data.Lattice
-type Block data.LatticeBlock
 type Data data.DataBlock
 type Parity data.ParityBlock
 
-func (l *Lattice) Download(block *Block) {
-	if d, ok := block.Base.(*Data); ok {
-	} else if p, ok := block.Base.(*Parity); ok {
-	} else {
-		return
-	}
+func (l *Lattice) Download(block *data.Block) {
 
 }
 func (l *Lattice) Reconstruct() ([]byte, error) {
-	out := make([]byte, len(l.DataNodes))
-	for i := 0; i < len(l.DataNodes); i++ {
-		if l.DataNodes[i] == nil {
+	out := make([]byte, l.NumBlocks)
+	for i := 0; i < l.NumBlocks; i++ {
+		b := l.Blocks[i]
+		if b.IsParity {
+			continue
+		}
+		if b.Data == nil {
 			return nil, errors.New("missing data block")
 		}
-		out = append(out, l.DataNodes[i].Data[:]...)
+		out = append(out, b.Data[:]...)
 	}
 
 	return out, nil
@@ -40,7 +38,7 @@ func getMaxStrandMatch(arr []int) (index, max int) {
 	return
 }
 
-func (l *Lattice) HierarchicalRepair(block *Block) *Block {
+func (l *Lattice) HierarchicalRepair(block *data.Block) *data.Block {
 	if block == nil {
 		return nil
 	} else if block.Data != nil {
@@ -49,16 +47,13 @@ func (l *Lattice) HierarchicalRepair(block *Block) *Block {
 
 	// Data repair
 
-	if d, ok := block.Base.(*Data); ok {
-		if d == nil {
-			return block
-		}
+	if !block.IsParity {
 		strandMatch := make([]int, Alpha)
 		for i := 0; i < Alpha; i++ {
-			if d.Left[i] != nil {
+			if block.Left[i] != nil {
 				strandMatch[i] = strandMatch[i] + 1
 			}
-			if d.Right[i] != nil {
+			if block.Right[i] != nil {
 				strandMatch[i] = strandMatch[i] + 1
 			}
 		}
@@ -70,42 +65,38 @@ func (l *Lattice) HierarchicalRepair(block *Block) *Block {
 		// If its 2 we already have the parities we need.
 		if mC == 2 {
 			// XOR Left & Right
-			block, _ = l.XORBlocks(&Block{Base: d.Left[mI]}, &Block{Base: d.Right[mI]})
+			block, _ = l.XORBlocks(block.Left[mI], block.Right[mI])
 		} else if mC == 1 {
 			// Missing left or right. Repair one of them.
-			if d.Left[mI] != nil {
+			if block.Left[mI].Data != nil {
 				// Repair right
-				l.HierarchicalRepair(&Block{Base: data.Right, Data: nil})
+				l.HierarchicalRepair(block.Right[mI])
 			} else {
 				// Repair left
-				l.HierarchicalRepair(&Block{Base: data.Left, Data: nil})
+				l.HierarchicalRepair(block.Left[mI])
 			}
-			block, _ = l.XORBlocks(&Block{Base: d.Left[mI]}, &Block{Base: d.Right[mI]})
+			block, _ = l.XORBlocks(block.Left[mI], block.Right[mI])
 
 			// XOR recovered with already existing
 		} else {
-			l.HierarchicalRepair(&Block{Base: data.Right, Data: nil})
-			l.HierarchicalRepair(&Block{Base: data.Left, Data: nil})
+			l.HierarchicalRepair(block.Right[mI])
+			l.HierarchicalRepair(block.Left[mI])
 
-			block, _ = l.XORBlocks(&Block{Base: d.Left[mI]}, &Block{Base: d.Right[mI]})
+			block, _ = l.XORBlocks(block.Left[mI], block.Right[mI])
 		}
-		return &Block{Base: d, Data: nil}
+		return block
 
-	} else if p, ok := block.Base.(*Parity); ok {
+	} else {
 		// Parity repair
-		if p == nil {
-			return block
-		}
 
 		// Try to request parity
-
-		if p.Left.Data != nil && p.Left.Left[p.Strand].Data != nil {
-			block, _ = l.XORBlocks(&Block{Base: p.Left}, &Block{Base: p.Left.Left[p.Strand]})
-		} else if p.Right.Data != nil && p.Right.Right[p.Strand].Data != nil {
-			block, _ = l.XORBlocks(&Block{Base: p.Right.Right[p.Strand]}, &Block{Base: p.Right})
+		if block.Left[0].Data != nil && block.Left[0].Left[block.Position].Data != nil {
+			block, _ = l.XORBlocks(block.Left[0], block.Left[0].Left[block.Position])
+		} else if block.Right[0].Data != nil && block.Right[0].Right[block.Position].Data != nil {
+			block, _ = l.XORBlocks(block.Right[0].Right[block.Position], block.Right[0])
 		}
 
-		return &Block{Base: d, Data: nil}
+		return block
 	}
 
 	return block
