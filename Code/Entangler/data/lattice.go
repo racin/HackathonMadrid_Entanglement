@@ -1,5 +1,10 @@
 package data
 
+import (
+	"encoding/json"
+	"io/ioutil"
+)
+
 // s Horizontal strands. p Helical strands
 type Lattice struct {
 	// DataNodes   []*DataBlock
@@ -10,6 +15,7 @@ type Lattice struct {
 	S, P        int
 	DataRequest chan *DownloadRequest
 	DataStream  chan *DownloadResponse
+	Config      map[string]string
 }
 
 func NewLattice(esize, alpha, s, p int) *Lattice {
@@ -22,6 +28,20 @@ func NewLattice(esize, alpha, s, p int) *Lattice {
 		S:      s,
 		P:      p,
 	}
+}
+
+func loadConfig() {
+	var fs map[string]string = make(map[string]string)
+	conf, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = json.Unmarshal(conf, &fs); err != nil {
+		return nil, err
+	}
+
+	return fs, nil
 }
 
 type LatticeBlock struct {

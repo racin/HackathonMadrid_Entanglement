@@ -12,6 +12,7 @@ type Parity data.ParityBlock
 func (l *Lattice) Download(block *data.Block) {
 
 }
+
 func (l *Lattice) Reconstruct() ([]byte, error) {
 	out := make([]byte, l.NumBlocks)
 	for i := 0; i < l.NumBlocks; i++ {
@@ -46,7 +47,6 @@ func (l *Lattice) HierarchicalRepair(block *data.Block) *data.Block {
 	}
 
 	// Data repair
-
 	if !block.IsParity {
 		strandMatch := make([]int, Alpha)
 		for i := 0; i < Alpha; i++ {
@@ -88,7 +88,7 @@ func (l *Lattice) HierarchicalRepair(block *data.Block) *data.Block {
 
 	} else {
 		// Parity repair
-		l.DataRequest <- &data.DownloadRequest{Key: "p" + block.Left.Position + block.Right.Position}
+		l.DataRequest <- &data.DownloadRequest{}
 
 		// Try to request parity
 		if block.Left[0].Data != nil && block.Left[0].Left[block.Position].Data != nil {
@@ -142,6 +142,7 @@ func (l *Lattice) XORBlocks(a *data.Block, b *data.Block) (*data.Block, error) {
 		return nil, errors.New("blocks are not connected")
 	}
 }
+
 func (l *Lattice) RoundrobinRepair(block *data.LatticeBlock) {
 
 }
