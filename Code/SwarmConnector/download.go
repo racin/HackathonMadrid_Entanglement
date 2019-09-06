@@ -123,23 +123,6 @@ func LoadFileStructure(path string) (map[string]string, error) {
 	return fs, nil
 }
 
-type Config map[string]string
-
-func LoadFileStructure(path string) (map[string]string, error) {
-
-	var fs map[string]string = make(map[string]string)
-	conf, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = json.Unmarshal(conf, &fs); err != nil {
-		return nil, err
-	}
-
-	return fs, nil
-}
-
 /// Strategy 1: Hierarchical
 /// Strategy 2: Round-robin (Tail latency)
 func (d *Downloader) AsyncDownloadAndReconstruct(content map[string][]byte, dataIndex string) error {
