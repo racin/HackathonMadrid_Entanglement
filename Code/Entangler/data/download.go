@@ -1,6 +1,8 @@
 package data
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"strconv"
 )
 
@@ -22,16 +24,12 @@ type DownloadResponse struct {
 	Value []byte
 }
 
-type Config map[string]string
-
 func LoadFileStructure(path string) (map[string]string, error) {
-
-	var fs map[string]string = make(map[string]string)
 	conf, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-
+	var fs map[string]string = make(map[string]string)
 	if err = json.Unmarshal(conf, &fs); err != nil {
 		return nil, err
 	}
