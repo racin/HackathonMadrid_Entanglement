@@ -11,12 +11,11 @@ type DownloadRequest struct {
 	Block *Block
 }
 
-func getSwarmHash(block *Block) string {
-	config, _ := LoadFileStructure("../retrives.txt")
+func GetSwarmHash(block *Block, fs *map[string]string) string {
 	if block.IsParity {
-		return config["p"+strconv.Itoa(block.Left[0].Position)+"_"+strconv.Itoa(block.Right[0].Position)]
+		return (*fs)["p"+strconv.Itoa(block.Left[0].Position)+"_"+strconv.Itoa(block.Right[0].Position)]
 	}
-	return config["d"+strconv.Itoa(block.Position)]
+	return (*fs)["d"+strconv.Itoa(block.Position)]
 }
 
 type DownloadResponse struct {
@@ -35,8 +34,4 @@ func LoadFileStructure(path string) (map[string]string, error) {
 	}
 
 	return fs, nil
-}
-
-func (l *Lattice) NewDownload(block *Block) *DownloadRequest {
-	return &DownloadRequest{Block: block, Key: getSwarmHash(block)}
 }

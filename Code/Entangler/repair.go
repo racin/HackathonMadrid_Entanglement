@@ -3,6 +3,7 @@ package Entangler
 import (
 	"errors"
 	"github.com/racin/HackathonMadrid_Entanglement/Code/Entangler/data"
+	"time"
 )
 
 type Lattice data.Lattice
@@ -88,17 +89,34 @@ func (l *Lattice) HierarchicalRepair(block *data.Block) *data.Block {
 
 	} else {
 		// Parity repair
-		l.DataRequest <- &data.DownloadRequest{}
-
-		// Try to request parity
-		if block.Left[0].Data != nil && block.Left[0].Left[block.Position].Data != nil {
-			block, _ = l.XORBlocks(block.Left[0], block.Left[0].Left[block.Position])
-		} else if block.Right[0].Data != nil && block.Right[0].Right[block.Position].Data != nil {
-			block, _ = l.XORBlocks(block.Right[0].Right[block.Position], block.Right[0])
-		}
+		l.NewDownload(block, func(b *data.Block, err error) {
+			if err != nil {
+				return
+			}
+			// Try to request parity
+			if block.Left[0].Data != nil && block.Left[0].Left[block.Position].Data != nil {
+				block, _ = l.XORBlocks(block.Left[0], block.Left[0].Left[block.Position])
+			} else if block.Right[0].Data != nil && block.Right[0].Right[block.Position].Data != nil {
+				block, _ = l.XORBlocks(block.Right[0].Right[block.Position], block.Right[0])
+			}
+		})
 
 		return block
 	}
+}
+
+func (l *Lattice) NewDownload(block *data.Block, f func(*data.Block, error)) {
+	l.DataRequest <- &data.DownloadRequest{Block: block, Key: data.GetSwarmHash(block, &l.Config)}
+	go func() {
+		select {
+		case <-time.After(30 * time.Second):
+			f(nil, errors.New("download timeout expired"))
+		case b := <-l.DataStream:
+			if block.IsParity == b.Block.IsParity && block.Position == b.Block.Position && block.Class == b.Block.Class {
+				f(b.Block, nil)
+			}
+		}
+	}()
 }
 
 // XORBlocks Figures out which is the related block between a and b and attempts to repair it.
