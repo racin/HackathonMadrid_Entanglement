@@ -1,12 +1,13 @@
 package data
 
 import (
-	"strings"
-	"strconv"
+	"fmt"
 	"math"
 	"reflect"
-	"fmt"
+	"strconv"
+	"strings"
 )
+
 // s Horizontal strands. p Helical strands
 type Lattice struct {
 	// DataNodes   []*DataBlock
@@ -23,13 +24,13 @@ type Lattice struct {
 }
 
 // TODO: Exact calculations for strandLen
-func sortConfigKeys(keys []reflect.Value, alpha, s, p int) []reflect.Value {
-	sortedKeys := make([]reflect.Value,len(keys))
-	strandLen := len(keys)/(alpha +1)
-	dataKeys := make([]reflect.Value,strandLen)
-	hpKeys := make([]reflect.Value,strandLen)
-	rpKeys := make([]reflect.Value,strandLen)
-	lpKeys := make([]reflect.Value,strandLen)
+func sortConfigKeys(keys []reflect.Value, alpha, s, p int) ([]reflect.Value, []reflect.Value, []reflect.Value, []reflect.Value) {
+	// sortedKeys := make([]reflect.Value,len(keys))
+	strandLen := len(keys) / (alpha + 1)
+	dataKeys := make([]reflect.Value, strandLen)
+	hpKeys := make([]reflect.Value, strandLen)
+	rpKeys := make([]reflect.Value, strandLen)
+	lpKeys := make([]reflect.Value, strandLen)
 
 	for i, key := range keys {
 		keyStr := key.String()
@@ -52,82 +53,67 @@ func sortConfigKeys(keys []reflect.Value, alpha, s, p int) []reflect.Value {
 			dataKeys = append(dataKeys, key)
 		}
 	}
-	copy(sortedKeys, dataKeys)
-	copy(sortedKeys[strandLen:], hpKeys)
-	copy(sortedKeys[strandLen*2:], rpKeys)
-	copy(sortedKeys[strandLen*3:], lpKeys)
+	// copy(sortedKeys, dataKeys)
+	// copy(sortedKeys[strandLen:], hpKeys)
+	// copy(sortedKeys[strandLen*2:], rpKeys)
+	// copy(sortedKeys[strandLen*3:], lpKeys)
 	//return append(dataKeys[:], append(hpKeys[:], append(rpKeys[:], lpKeys[:]...)...)...)
-	return sortedKeys
+	return dataKeys, hpKeys, rpKeys, lpKeys
 }
 
+func createParities(keys []reflect.Value, blocks []*Block, datablocks map[string]*Block, class StrandClass) {
+	for _, key := range keys {
+		keyStr := key.String()
+		fmt.Println("Key: " + keyStr)
+		position := keyStr[1:]
+		leftright := strings.Split(position, "-")
+		left, _ := strconv.Atoi(leftright[0])
+		right, _ := strconv.Atoi(leftright[1])
+
+		b := &Block{IsParity: true, Class: class}
+
+		if dataLeft, ok := datablocks[leftright[0]]; ok {
+			b.Left = []*Block{dataLeft}
+			dataLeft.Right = append(dataLeft.Right, b)
+		}
+
+		if dataRight, ok := datablocks[leftright[1]]; ok {
+			b.Right = []*Block{dataRight}
+			dataRight.Left = append(dataRight.Left, b)
+		}
+
+		blocks = append(blocks, b)
+	}
+}
+
+func createDataBlocks(keys []reflect.Value, blocks []*Block, datablocks map[string]*Block, alpha int) {
+	for _, key := range keys {
+		keyStr := key.String()
+		position := keyStr[1:]
+		pos, _ := strconv.Atoi(position)
+		b := &Block{Position: pos, IsParity: false,
+			Left:  make([]*Block, alpha),
+			Right: make([]*Block, alpha)}
+		datablocks[position] = b
+		blocks = append(blocks, b)
+	}
+}
 func NewLattice(esize, alpha, s, p int, confpath string) *Lattice {
 	numBlocks := (1 + alpha) * esize
 	conf, _ := LoadFileStructure(confpath)
-	sortedKeys := sortConfigKeys(reflect.ValueOf(conf).MapKeys(), alpha, s, p)
-	blocks := make([]*Block, numBlocks)
+	dataKeys, hpKeys, rpKeys, lpKeys := sortConfigKeys(reflect.ValueOf(conf).MapKeys(), alpha, s, p)
+	blocks := make([]*Block, len(conf))
+	datablocks := make(map[string]*Block, len(dataKeys))
 
-	for _, key := range sortedKeys {
-		keyStr := key.String()
-		fmt.Println("Key: " + keyStr)
-		// Construct blocks
-		isParity := keyStr[:1] == "p"
-		position := keyStr[1:]
-		if isParity {
-			leftright := strings.Split(position, "-")
-			left, _ := strconv.Atoi(leftright[0])
-			right, _ := strconv.Atoi(leftright[1])
-			var class StrandClass
+	createDataBlocks(dataKeys, blocks, datablocks, alpha)
+	createParities(hpKeys, blocks, datablocks, Horizontal)
+	createParities(rpKeys, blocks, datablocks, Right)
+	createParities(lpKeys, blocks, datablocks, Left)
 
-			fr, fh, fl := GetForwardNeighbours(left, s, p)
-			switch right {
-			case fr:
-				class = Right
-			case fh:
-				class = Horizontal
-			case fl:
-				class = Left
-			}
-			
-			blocks = append(blocks, &Block {})
-		} else {
-			pos, _ := strconv.Atoi(position)
-			
-			blocks = append(blocks, &Block {})
-		}
-	}
-	
-	for key, _ := range conf {
-		// Construct blocks
-		isParity := key[:1] == "p"
-		position := key[1:]
-		if isParity {
-			leftright := strings.Split(position, "-")
-			left, _ := strconv.Atoi(leftright[0])
-			right, _ := strconv.Atoi(leftright[1])
-			var class StrandClass
-
-			fr, fh, fl := GetForwardNeighbours(left, s, p)
-			switch right {
-			case fr:
-				class = Right
-			case fh:
-				class = Horizontal
-			case fl:
-				class = Left
-			}
-			
-			blocks = append(blocks, &Block {})
-		} else {
-			pos, _ := strconv.Atoi(position)
-			
-			blocks = append(blocks, &Block {})
-		}
-
-	}
 	return &Lattice{
 		// DataNodes:   make([]*DataBlock, esize),
 		// ParityNodes: make([]*ParityBlock, alpha*esize),
-		Blocks:   make([]*Block, numBlocks),
+		Blocks:   blocks,
 		Alpha:    alpha,
 		S:        s,
 		P:        p,
@@ -194,6 +180,7 @@ func GetForwardNeighbours(index, S, P int) (r, h, l int) {
 	}
 	return
 }
+
 // TODO: Fix underflow naming errors on the nodes on the extreme of the lattice.
 func GetBackwardNeighbours(index int) (r, h, l int) {
 	// Check is it top, center or bottom in the lattice
