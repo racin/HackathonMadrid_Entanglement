@@ -61,7 +61,9 @@ func sortConfigKeys(keys []reflect.Value, alpha, s, p int) ([]reflect.Value, []r
 	return dataKeys, hpKeys, rpKeys, lpKeys
 }
 
-func createParities(keys []reflect.Value, blocks []*Block, datablocks map[string]*Block, class StrandClass) {
+func createParities(conf map[string]string,
+	keys []reflect.Value, blocks []*Block,
+	datablocks map[string]*Block, class StrandClass) {
 	for _, key := range keys {
 		keyStr := key.String()
 		fmt.Println("Key: " + keyStr)
@@ -70,7 +72,7 @@ func createParities(keys []reflect.Value, blocks []*Block, datablocks map[string
 		left, _ := strconv.Atoi(leftright[0])
 		right, _ := strconv.Atoi(leftright[1])
 
-		b := &Block{IsParity: true, Class: class}
+		b := &Block{IsParity: true, Class: class, Identifier: conf[keyStr]}
 
 		if dataLeft, ok := datablocks[leftright[0]]; ok {
 			b.Left = []*Block{dataLeft}
@@ -86,14 +88,15 @@ func createParities(keys []reflect.Value, blocks []*Block, datablocks map[string
 	}
 }
 
-func createDataBlocks(keys []reflect.Value, blocks []*Block, datablocks map[string]*Block, alpha int) {
+func createDataBlocks(conf map[string]string, keys []reflect.Value, blocks []*Block, datablocks map[string]*Block, alpha int) {
 	for _, key := range keys {
 		keyStr := key.String()
 		position := keyStr[1:]
 		pos, _ := strconv.Atoi(position)
 		b := &Block{Position: pos, IsParity: false,
-			Left:  make([]*Block, alpha),
-			Right: make([]*Block, alpha)}
+			Left:       make([]*Block, alpha),
+			Right:      make([]*Block, alpha),
+			Identifier: conf[keyStr]}
 		datablocks[position] = b
 		blocks = append(blocks, b)
 	}
@@ -105,10 +108,10 @@ func NewLattice(esize, alpha, s, p int, confpath string) *Lattice {
 	blocks := make([]*Block, len(conf))
 	datablocks := make(map[string]*Block, len(dataKeys))
 
-	createDataBlocks(dataKeys, blocks, datablocks, alpha)
-	createParities(hpKeys, blocks, datablocks, Horizontal)
-	createParities(rpKeys, blocks, datablocks, Right)
-	createParities(lpKeys, blocks, datablocks, Left)
+	createDataBlocks(conf, dataKeys, blocks, datablocks, alpha)
+	createParities(conf, hpKeys, blocks, datablocks, Horizontal)
+	createParities(conf, rpKeys, blocks, datablocks, Right)
+	createParities(conf, lpKeys, blocks, datablocks, Left)
 
 	return &Lattice{
 		// DataNodes:   make([]*DataBlock, esize),
@@ -143,12 +146,13 @@ type ParityBlock struct {
 }
 
 type Block struct {
-	Left     []*Block
-	Right    []*Block
-	Position int
-	Data     []byte
-	IsParity bool
-	Class    StrandClass
+	Left       []*Block
+	Right      []*Block
+	Position   int
+	Data       []byte
+	IsParity   bool
+	Class      StrandClass
+	Identifier string
 }
 
 type StrandClass int
