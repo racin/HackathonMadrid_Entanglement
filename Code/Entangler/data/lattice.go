@@ -4,6 +4,8 @@ import (
 	"strings"
 	"strconv"
 	"math"
+	"reflect"
+	"fmt"
 )
 // s Horizontal strands. p Helical strands
 type Lattice struct {
@@ -20,10 +22,80 @@ type Lattice struct {
 	MissingDataBlocks int
 }
 
+// TODO: Exact calculations for strandLen
+func sortConfigKeys(keys []reflect.Value, alpha, s, p int) []reflect.Value {
+	sortedKeys := make([]reflect.Value,len(keys))
+	strandLen := len(keys)/(alpha +1)
+	dataKeys := make([]reflect.Value,strandLen)
+	hpKeys := make([]reflect.Value,strandLen)
+	rpKeys := make([]reflect.Value,strandLen)
+	lpKeys := make([]reflect.Value,strandLen)
+
+	for i, key := range keys {
+		keyStr := key.String()
+		isParity := keyStr[:1] == "p"
+		if isParity {
+			position := keyStr[1:]
+			leftright := strings.Split(position, "-")
+			left, _ := strconv.Atoi(leftright[0])
+			right, _ := strconv.Atoi(leftright[1])
+			fr, fh, fl := GetForwardNeighbours(left, s, p)
+			switch right {
+			case fr:
+				rpKeys = append(rpKeys, key)
+			case fh:
+				hpKeys = append(hpKeys, key)
+			case fl:
+				lpKeys = append(lpKeys, key)
+			}
+		} else {
+			dataKeys = append(dataKeys, key)
+		}
+	}
+	copy(sortedKeys, dataKeys)
+	copy(sortedKeys[strandLen:], hpKeys)
+	copy(sortedKeys[strandLen*2:], rpKeys)
+	copy(sortedKeys[strandLen*3:], lpKeys)
+	//return append(dataKeys[:], append(hpKeys[:], append(rpKeys[:], lpKeys[:]...)...)...)
+	return sortedKeys
+}
+
 func NewLattice(esize, alpha, s, p int, confpath string) *Lattice {
 	numBlocks := (1 + alpha) * esize
 	conf, _ := LoadFileStructure(confpath)
+	sortedKeys := sortConfigKeys(reflect.ValueOf(conf).MapKeys(), alpha, s, p)
 	blocks := make([]*Block, numBlocks)
+
+	for _, key := range sortedKeys {
+		keyStr := key.String()
+		fmt.Println("Key: " + keyStr)
+		// Construct blocks
+		isParity := keyStr[:1] == "p"
+		position := keyStr[1:]
+		if isParity {
+			leftright := strings.Split(position, "-")
+			left, _ := strconv.Atoi(leftright[0])
+			right, _ := strconv.Atoi(leftright[1])
+			var class StrandClass
+
+			fr, fh, fl := GetForwardNeighbours(left, s, p)
+			switch right {
+			case fr:
+				class = Right
+			case fh:
+				class = Horizontal
+			case fl:
+				class = Left
+			}
+			
+			blocks = append(blocks, &Block {})
+		} else {
+			pos, _ := strconv.Atoi(position)
+			
+			blocks = append(blocks, &Block {})
+		}
+	}
+	
 	for key, _ := range conf {
 		// Construct blocks
 		isParity := key[:1] == "p"
