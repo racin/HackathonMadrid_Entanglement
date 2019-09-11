@@ -2,7 +2,7 @@ package Entangler
 
 import (
 	"fmt"
-	"math"
+	"github.com/racin/HackathonMadrid_Entanglement/Code/Entangler/data"
 	"os"
 	"strconv"
 )
@@ -32,8 +32,8 @@ func init() {
 }
 
 func entangle(datachunk []byte, index int) {
-	r, h, l := GetMemoryPosition(index)
-	rBack, hBack, lBack := GetBackwardNeighbours(index)
+	r, h, l := data.GetMemoryPosition(index, S, P)
+	rBack, hBack, lBack := data.GetBackwardNeighbours(index, S, P)
 	rParity := ParityMemory[r]
 	hParity := ParityMemory[h]
 	lParity := ParityMemory[l]

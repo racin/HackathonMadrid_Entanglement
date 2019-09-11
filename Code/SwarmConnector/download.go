@@ -41,7 +41,7 @@ type DownloadPool struct {
 func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPool {
 	d := &DownloadPool{
 		resource: make(chan *Downloader, capacity),
-		lattice:  data.NewLattice(500, Entangler.Alpha, Entangler.S, Entangler.P),
+		//lattice:  data.NewLattice(Entangler.Alpha, Entangler.S, Entangler.P),
 		Capacity: capacity,
 		count:    0,
 		Filepath: filepath,
@@ -65,6 +65,23 @@ func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPo
 	return d
 }
 
+func (p *DownloadPool) DownloadFile(string config) string filepath{
+	filepath = ""
+
+	// 1. Construct lattice
+	lattice := data.NewLattice(Entangler.Alpha, Entangler.S, Entangler.P, config)
+
+	// 2. Attempt to download Data Blocks
+
+	// 3. Issue repairs if neccesary
+
+	// 4. Rebuild the file
+
+	// 5. Store locally
+
+	// 6. Output file path
+	return
+}
 // Drain drains the pool until it has no more than n resources
 func (p *DownloadPool) Drain(n int) {
 	p.lock.Lock()

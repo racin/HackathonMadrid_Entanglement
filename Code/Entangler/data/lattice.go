@@ -32,7 +32,7 @@ func sortConfigKeys(keys []reflect.Value, alpha, s, p int) ([]reflect.Value, []r
 	rpKeys := make([]reflect.Value, strandLen)
 	lpKeys := make([]reflect.Value, strandLen)
 
-	for i, key := range keys {
+	for _, key := range keys {
 		keyStr := key.String()
 		isParity := keyStr[:1] == "p"
 		if isParity {
@@ -69,8 +69,8 @@ func createParities(conf map[string]string,
 		fmt.Println("Key: " + keyStr)
 		position := keyStr[1:]
 		leftright := strings.Split(position, "-")
-		left, _ := strconv.Atoi(leftright[0])
-		right, _ := strconv.Atoi(leftright[1])
+		// left, _ := strconv.Atoi(leftright[0])
+		// right, _ := strconv.Atoi(leftright[1])
 
 		b := &Block{IsParity: true, Class: class, Identifier: conf[keyStr]}
 
@@ -101,8 +101,8 @@ func createDataBlocks(conf map[string]string, keys []reflect.Value, blocks []*Bl
 		blocks = append(blocks, b)
 	}
 }
-func NewLattice(esize, alpha, s, p int, confpath string) *Lattice {
-	numBlocks := (1 + alpha) * esize
+func NewLattice(alpha, s, p int, confpath string) *Lattice {
+	//numBlocks := (1 + alpha) * esize
 	conf, _ := LoadFileStructure(confpath)
 	dataKeys, hpKeys, rpKeys, lpKeys := sortConfigKeys(reflect.ValueOf(conf).MapKeys(), alpha, s, p)
 	blocks := make([]*Block, len(conf))
@@ -186,7 +186,7 @@ func GetForwardNeighbours(index, S, P int) (r, h, l int) {
 }
 
 // TODO: Fix underflow naming errors on the nodes on the extreme of the lattice.
-func GetBackwardNeighbours(index int) (r, h, l int) {
+func GetBackwardNeighbours(index, S, P int) (r, h, l int) {
 	// Check is it top, center or bottom in the lattice
 	// 1 -> Top, 0 -> Bottom, else Center
 	var nodePos = index % S
@@ -207,14 +207,14 @@ func GetBackwardNeighbours(index int) (r, h, l int) {
 	return
 }
 
-func GetMemoryPosition(index int) (r, h, l int) {
+func GetMemoryPosition(index, S, P int) (r, h, l int) {
 	// Get the position in the ParityMemory array where the parity is located
 	// For now this will recursively call the GetBackwardNeighbours function
 
 	h = ((index - 1) % S) + S
 	r, l = index, index
 
-	for ; r > S; r, _, _ = GetBackwardNeighbours(r) {
+	for ; r > S; r, _, _ = GetBackwardNeighbours(r, S, P) {
 	}
 
 	switch r {
@@ -235,7 +235,7 @@ func GetMemoryPosition(index int) (r, h, l int) {
 		break
 	}
 
-	for ; l > S; _, _, l = GetBackwardNeighbours(l) {
+	for ; l > S; _, _, l = GetBackwardNeighbours(l, S, P) {
 	}
 
 	switch l {
