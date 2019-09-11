@@ -2,15 +2,10 @@ package Entangler
 
 import (
 	"errors"
-	"github.com/racin/HackathonMadrid_Entanglement/Code/Entangler/data"
 	"time"
 )
 
-type Lattice data.Lattice
-type Data data.DataBlock
-type Parity data.ParityBlock
-
-func (l *Lattice) Download(block *data.Block) {
+func (l *Lattice) Download(block *Block) {
 
 }
 
@@ -24,7 +19,7 @@ func getMaxStrandMatch(arr []int) (index, max int) {
 	return
 }
 
-func (l *Lattice) HierarchicalRepair(block *data.Block) *data.Block {
+func (l Lattice) HierarchicalRepair(block *Block) *Block {
 	if block == nil {
 		return nil
 	} else if block.Data != nil {
@@ -73,7 +68,7 @@ func (l *Lattice) HierarchicalRepair(block *data.Block) *data.Block {
 
 	} else {
 		// Parity repair
-		l.NewDownload(block, func(b *data.Block, err error) {
+		l.NewDownload(block, func(b *Block, err error) {
 			if err != nil {
 				return
 			}
@@ -89,8 +84,8 @@ func (l *Lattice) HierarchicalRepair(block *data.Block) *data.Block {
 	}
 }
 
-func (l *Lattice) NewDownload(block *data.Block, f func(*data.Block, error)) {
-	l.DataRequest <- &data.DownloadRequest{Block: block, Key: data.GetSwarmHash(block, &l.Config)}
+func (l *Lattice) NewDownload(block *Block, f func(*Block, error)) {
+	l.DataRequest <- &DownloadRequest{Block: block, Key: GetSwarmHash(block, &l.Config)}
 	go func() {
 		select {
 		case <-time.After(30 * time.Second):
@@ -105,7 +100,7 @@ func (l *Lattice) NewDownload(block *data.Block, f func(*data.Block, error)) {
 
 // XORBlocks Figures out which is the related block between a and b and attempts to repair it.
 // At least one of them needs to be a parity block.
-func (l *Lattice) XORBlocks(a *data.Block, b *data.Block) (*data.Block, error) {
+func (l *Lattice) XORBlocks(a *Block, b *Block) (*Block, error) {
 
 	var err error
 	// Case 1: Both is data (Invalid case)
@@ -127,7 +122,7 @@ func (l *Lattice) XORBlocks(a *data.Block, b *data.Block) (*data.Block, error) {
 	}
 
 	// Case 3: One is Parity, one is Data
-	var data, parity *data.Block
+	var data, parity *Block
 	if !a.IsParity {
 		data, parity = a, b
 	} else {
@@ -145,6 +140,6 @@ func (l *Lattice) XORBlocks(a *data.Block, b *data.Block) (*data.Block, error) {
 	}
 }
 
-func (l *Lattice) RoundrobinRepair(block *data.LatticeBlock) {
+func (l *Lattice) RoundrobinRepair(block LatticeBlock) {
 
 }

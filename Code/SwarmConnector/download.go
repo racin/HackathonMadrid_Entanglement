@@ -4,8 +4,7 @@ package SwarmConnector
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/racin/HackathonMadrid_Entanglement/Code/Entangler"
-	"github.com/racin/HackathonMadrid_Entanglement/Code/Entangler/data"
+	e "github.com/racin/HackathonMadrid_Entanglement/Code/Entangler"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -29,13 +28,13 @@ type Downloader struct {
 type DownloadPool struct {
 	lock         sync.Mutex       // Locking
 	resource     chan *Downloader // Channel to obtain resource from the pool
-	lattice      *data.Lattice    // Shared map of retrieved blocks
+	lattice      *e.Lattice       // Shared map of retrieved blocks
 	Capacity     int              // Maximum capacity of the pool.
 	count        int              // Current count of allocated resources.
 	Filepath     string           // Final output location
 	endpoint     string
-	datarequests chan *data.DownloadRequest
-	datastream   chan *data.DownloadResponse
+	datarequests chan *e.DownloadRequest
+	datastream   chan *e.DownloadResponse
 }
 
 func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPool {
@@ -59,7 +58,7 @@ func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPo
 			if err != nil {
 				// Fatal error
 			}
-			d.lattice.DataStream <- &data.DownloadResponse{DownloadRequest: request, Value: contentA}
+			d.lattice.DataStream <- &e.DownloadResponse{DownloadRequest: request, Value: contentA}
 		}
 	}()
 	return d
@@ -73,12 +72,11 @@ func (p *DownloadPool) DownloadFile(config string) (filepath string) {
 	defer close(p.lattice.DataRequest)
 
 	// 1. Construct lattice
-	lattice := data.NewLattice(Entangler.Alpha, Entangler.S, Entangler.P, config)
+	lattice := e.NewLattice(e.Alpha, e.S, e.P, config)
 
 	// 2. Attempt to download Data Blocks
-
 	for i := 0; i < len(lattice.DataBlocks); i++ {
-		a := func(block *data.Block) {
+		a := func(block *e.Block) {
 			file, err := p.reserve().Client.Download(block.Identifier, "")
 			if err != nil {
 				return
@@ -88,6 +86,7 @@ func (p *DownloadPool) DownloadFile(config string) (filepath string) {
 				return
 			}
 			copy(block.Data, contentA)
+
 		}
 
 		go a(lattice.DataBlocks[i])
@@ -98,6 +97,7 @@ func (p *DownloadPool) DownloadFile(config string) (filepath string) {
 	case dl := <-p.lattice.DataStream:
 		if dl.Block.Data == nil {
 			// repair
+			p.lattice.HierarchicalRepair()
 		} else {
 			if !dl.Block.IsParity {
 				p.lattice.MissingDataBlocks -= 1
@@ -111,11 +111,8 @@ func (p *DownloadPool) DownloadFile(config string) (filepath string) {
 	}
 
 	// 4. Rebuild the file
-	p.lattice.
+	p.lattice.RebuildFile(filepath)
 
-	// 5. Store locally
-
-	// 6. Output file path
 	return
 }
 

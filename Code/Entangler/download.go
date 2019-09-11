@@ -1,4 +1,4 @@
-package data
+package Entangler
 
 import (
 	"encoding/json"

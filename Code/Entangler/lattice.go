@@ -1,7 +1,6 @@
-package data
+package Entangler
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"reflect"
