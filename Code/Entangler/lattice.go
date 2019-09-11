@@ -29,9 +29,9 @@ func sortConfigKeys(keys []reflect.Value, alpha, s, p int) ([]reflect.Value, []r
 	// sortedKeys := make([]reflect.Value,len(keys))
 	strandLen := len(keys) / (alpha + 1)
 	dataKeys := make([]reflect.Value, strandLen)
-	hpKeys := make([]reflect.Value, strandLen)
-	rpKeys := make([]reflect.Value, strandLen)
-	lpKeys := make([]reflect.Value, strandLen)
+	hpKeys := make([]reflect.Value, 0, strandLen)
+	rpKeys := make([]reflect.Value, 0, strandLen)
+	lpKeys := make([]reflect.Value, 0, strandLen)
 
 	for _, key := range keys {
 		keyStr := key.String()
@@ -65,21 +65,23 @@ func sortConfigKeys(keys []reflect.Value, alpha, s, p int) ([]reflect.Value, []r
 
 func createParities(conf map[string]string,
 	keys []reflect.Value, blocks []*Block,
-	class StrandClass) {
+	class StrandClass) []*Block {
 	fmt.Printf("Create parities. Class: %d\n", class)
 	for _, key := range keys {
 		keyStr := key.String()
 		fmt.Println("Key: " + keyStr)
 		position := keyStr[1:]
-		leftright := strings.Split(position, "-")
+		leftright := strings.Split(position, "_")
 		left, _ := strconv.Atoi(leftright[0])
 		right, _ := strconv.Atoi(leftright[1])
 
 		b := &Block{IsParity: true, Class: class, Identifier: conf[keyStr]}
 
-		if dataLeft := blocks[left-1]; dataLeft != nil {
-			b.Left = []*Block{dataLeft}
-			dataLeft.Right = append(dataLeft.Right, b)
+		if left > 0 {
+			if dataLeft := blocks[left-1]; dataLeft != nil {
+				b.Left = []*Block{dataLeft}
+				dataLeft.Right = append(dataLeft.Right, b)
+			}
 		}
 
 		if dataRight := blocks[right-1]; dataRight != nil {
@@ -89,10 +91,11 @@ func createParities(conf map[string]string,
 
 		blocks = append(blocks, b)
 	}
+	return blocks
 }
 
 func createDataBlocks(conf map[string]string, keys []reflect.Value,
-	blocks []*Block, alpha int) {
+	blocks []*Block, alpha int) []*Block {
 	for _, key := range keys {
 		keyStr := key.String()
 		position := keyStr[1:]
@@ -103,21 +106,22 @@ func createDataBlocks(conf map[string]string, keys []reflect.Value,
 			Identifier: conf[keyStr]}
 		blocks = append(blocks, b)
 	}
+	return blocks
 }
 func NewLattice(alpha, s, p int, confpath string) *Lattice {
 	//numBlocks := (1 + alpha) * esize
 	conf, _ := LoadFileStructure(confpath)
 	dataKeys, hpKeys, rpKeys, lpKeys := sortConfigKeys(reflect.ValueOf(conf).MapKeys(), alpha, s, p)
-	blocks := make([]*Block, len(conf))
+	blocks := make([]*Block, 0, len(conf))
 	//datablocks := make(map[string]*Block, len(dataKeys))
 	//datablocks := make([]*Block, len(dataKeys))
 
-	createDataBlocks(conf, dataKeys, blocks, alpha)
+	blocks = createDataBlocks(conf, dataKeys, blocks, alpha)
 	//copy(datablocks, blocks) // Blocks should be sorted already.
 
-	createParities(conf, hpKeys, blocks, Horizontal)
-	createParities(conf, rpKeys, blocks, Right)
-	createParities(conf, lpKeys, blocks, Left)
+	blocks = append(blocks, createParities(conf, hpKeys, blocks, Horizontal)...)
+	blocks = append(blocks, createParities(conf, rpKeys, blocks, Right)...)
+	blocks = append(blocks, createParities(conf, lpKeys, blocks, Left)...)
 
 	return &Lattice{
 		// DataNodes:   make([]*DataBlock, esize),
