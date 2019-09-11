@@ -101,8 +101,8 @@ func createDataBlocks(conf map[string]string, keys []reflect.Value,
 		position := keyStr[1:]
 		pos, _ := strconv.Atoi(position)
 		b := &Block{Position: pos, IsParity: false,
-			Left:       make([]*Block, alpha),
-			Right:      make([]*Block, alpha),
+			Left:       make([]*Block, 0, alpha),
+			Right:      make([]*Block, 0, alpha),
 			Identifier: conf[keyStr]}
 		blocks = append(blocks, b)
 	}

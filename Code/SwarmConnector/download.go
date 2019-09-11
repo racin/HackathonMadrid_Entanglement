@@ -66,7 +66,9 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 }
 
 func (p *DownloadPool) DownloadBlock(block *e.Block) {
-	file, err := p.reserve().Client.Download(block.Identifier, "")
+	fmt.Printf("Downloading block: %d\n", block.Position)
+	dl := p.reserve()
+	file, err := dl.Client.Download(block.Identifier, "")
 	if err != nil {
 		return
 	}
@@ -74,7 +76,9 @@ func (p *DownloadPool) DownloadBlock(block *e.Block) {
 	if err != nil {
 		return
 	}
+	fmt.Printf("Completed download of block: %d\n", block.Position)
 	copy(block.Data, contentA)
+	p.release(dl)
 }
 func (p *DownloadPool) DownloadFile(config, output string) error {
 	done := make(chan struct{})
@@ -86,8 +90,8 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 	lattice := e.NewLattice(e.Alpha, e.S, e.P, config)
 
 	// 2. Attempt to download Data Blocks
-	for i := 0; i < len(lattice.DataBlocks); i++ {
-		go p.DownloadBlock(lattice.DataBlocks[i])
+	for i := 0; i < lattice.NumDataBlocks; i++ {
+		go p.DownloadBlock(lattice.Blocks[i])
 	}
 
 	// 3. Issue repairs if neccesary
@@ -135,6 +139,7 @@ func (p *DownloadPool) reserve() *Downloader {
 	select {
 	case d = <-p.resource:
 	default:
+		fmt.Println("Generating new resource")
 		d = newDownloader(p.endpoint)
 		p.count++
 	}
