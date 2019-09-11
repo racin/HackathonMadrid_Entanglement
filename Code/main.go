@@ -105,5 +105,12 @@ func setupRoutes() {
 
 func main() {
 	fmt.Println("Hello World")
-	setupRoutes()
+	dp := SwarmConnector.NewDownloadPool(12, "https://swarm-gateways.net")
+	fmt.Println("Created Datapool")
+	err := dp.DownloadFile("../retrives.txt", "../files/main.jpeg")
+	fmt.Println("Downloaded file")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	//setupRoutes()
 }

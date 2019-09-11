@@ -3,10 +3,12 @@ package SwarmConnector
 //import requiered libraries
 import (
 	"encoding/json"
+	"fmt"
 	e "github.com/racin/HackathonMadrid_Entanglement/Code/Entangler"
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	//bzzclient "https://github.com/ethereum/go-ethereum/tree/master/swarm/api/client/client.go"
 	bzzclient "github.com/ethereum/go-ethereum/swarm/api/client"
@@ -25,41 +27,41 @@ type Downloader struct {
 }
 
 type DownloadPool struct {
-	lock         sync.Mutex       // Locking
-	resource     chan *Downloader // Channel to obtain resource from the pool
-	lattice      *e.Lattice       // Shared map of retrieved blocks
-	Capacity     int              // Maximum capacity of the pool.
-	count        int              // Current count of allocated resources.
-	Filepath     string           // Final output location
+	lock     sync.Mutex       // Locking
+	resource chan *Downloader // Channel to obtain resource from the pool
+	lattice  *e.Lattice       // Shared map of retrieved blocks
+	Capacity int              // Maximum capacity of the pool.
+	count    int              // Current count of allocated resources.
+	//Filepath     string           // Final output location
 	endpoint     string
 	datarequests chan *e.DownloadRequest
 	datastream   chan *e.DownloadResponse
 }
 
-func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPool {
+func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 	d := &DownloadPool{
 		resource: make(chan *Downloader, capacity),
 		//lattice:  data.NewLattice(Entangler.Alpha, Entangler.S, Entangler.P),
 		Capacity: capacity,
 		count:    0,
-		Filepath: filepath,
+		//Filepath: filepath,
 		endpoint: endpoint,
 	}
-	go func() {
-		select {
-		case request := <-d.lattice.DataRequest:
-			// look up hash of requested block
-			dl, err := d.reserve().Client.Download(request.Key, "")
-			if err != nil {
-				// Issue repair
-			}
-			contentA, err := ioutil.ReadAll(dl)
-			if err != nil {
-				// Fatal error
-			}
-			d.lattice.DataStream <- &e.DownloadResponse{DownloadRequest: request, Value: contentA}
-		}
-	}()
+	// go func() {
+	// 	select {
+	// 	case request := <-d.lattice.DataRequest:
+	// 		// look up hash of requested block
+	// 		dl, err := d.reserve().Client.Download(request.Key, "")
+	// 		if err != nil {
+	// 			// Issue repair
+	// 		}
+	// 		contentA, err := ioutil.ReadAll(dl)
+	// 		if err != nil {
+	// 			// Fatal error
+	// 		}
+	// 		d.lattice.DataStream <- &e.DownloadResponse{DownloadRequest: request, Value: contentA}
+	// 	}
+	// }()
 	return d
 }
 
@@ -77,8 +79,8 @@ func (p *DownloadPool) DownloadBlock(block *e.Block) {
 func (p *DownloadPool) DownloadFile(config, output string) error {
 	done := make(chan struct{})
 	defer close(done)
-	defer close(p.lattice.DataStream)
-	defer close(p.lattice.DataRequest)
+	//	defer close(p.lattice.DataStream)
+	//	defer close(p.lattice.DataRequest)
 
 	// 1. Construct lattice
 	lattice := e.NewLattice(e.Alpha, e.S, e.P, config)
@@ -204,85 +206,85 @@ func StringConvertBlockIndex(index ...int) string {
 // 		((*content)[bl] != nil && (*content)[fl] != nil)
 // }
 
-// func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error) {
-// 	client := bzzclient.NewClient("https://swarm-gateways.net")
-// 	config, _ := LoadFileStructure("../retrives.txt")
-// 	var allChunks [][]byte
-// 	var err error
+func DownloadAndReconstruct(filePath string, dataIndexes ...bool) (string, error) {
+	client := bzzclient.NewClient("https://swarm-gateways.net")
+	config, _ := LoadFileStructure("../retrives.txt")
+	var allChunks [][]byte
+	var err error
 
-// 	// Regular download .
-// 	//lastData := 1
-// 	//var missingDataIndex []int
-// 	for i := 1; i <= len(dataIndexes); i++ {
-// 		if dataIndexes[i-1] == false {
-// 			//missingDataIndex = append(missingDataIndex, i)
-// 			fmt.Print("Missing: " + strconv.Itoa(i) + "\n")
-// 			br, _, _ := Entangler.GetBackwardNeighbours(i)
-// 			fr, _, _ := Entangler.GetForwardNeighbours(i)
-// 			//Getting filenames to XOR
-// 			values1 := []string{"p", strconv.Itoa(br), "_", strconv.Itoa(i)}
-// 			file1 := strings.Join(values1, "")
-// 			values2 := []string{"p", strconv.Itoa(i), "_", strconv.Itoa(fr)}
-// 			file2 := strings.Join(values2, "")
-// 			fmt.Println(file1)
-// 			fmt.Println(file2)
-// 			HashBck := config[file1]
-// 			HashFwd := config[file2]
+	// Regular download .
+	//lastData := 1
+	//var missingDataIndex []int
+	for i := 1; i <= len(dataIndexes); i++ {
+		if dataIndexes[i-1] == false {
+			//missingDataIndex = append(missingDataIndex, i)
+			fmt.Print("Missing: " + strconv.Itoa(i) + "\n")
+			br, _, _ := e.GetBackwardNeighbours(i, e.S, e.P)
+			fr, _, _ := e.GetForwardNeighbours(i, e.S, e.P)
+			//Getting filenames to XOR
+			values1 := []string{"p", strconv.Itoa(br), "_", strconv.Itoa(i)}
+			file1 := strings.Join(values1, "")
+			values2 := []string{"p", strconv.Itoa(i), "_", strconv.Itoa(fr)}
+			file2 := strings.Join(values2, "")
+			fmt.Println(file1)
+			fmt.Println(file2)
+			HashBck := config[file1]
+			HashFwd := config[file2]
 
-// 			if HashBck == "" || HashFwd == "" {
-// 				hash := config["d"+strconv.Itoa(i)]
-// 				fmt.Println(hash)
-// 				dataChunk, err := client.Download(hash, "")
-// 				if err != nil {
-// 					fmt.Println(err.Error())
-// 				}
-// 				content, err := ioutil.ReadAll(dataChunk)
-// 				if err != nil {
-// 					fmt.Println(err.Error())
-// 				}
-// 				allChunks = append(allChunks, content)
-// 			} else {
-// 				fileA, _ := client.Download(HashBck, "")
-// 				fileB, _ := client.Download(HashFwd, "")
+			if HashBck == "" || HashFwd == "" {
+				hash := config["d"+strconv.Itoa(i)]
+				fmt.Println(hash)
+				dataChunk, err := client.Download(hash, "")
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+				content, err := ioutil.ReadAll(dataChunk)
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+				allChunks = append(allChunks, content)
+			} else {
+				fileA, _ := client.Download(HashBck, "")
+				fileB, _ := client.Download(HashFwd, "")
 
-// 				contentA, _ := ioutil.ReadAll(fileA)
-// 				contentB, _ := ioutil.ReadAll(fileB)
-// 				//fmt.Println(string(contentA)) // hello world
-// 				//fmt.Println(err) // hello world
+				contentA, _ := ioutil.ReadAll(fileA)
+				contentB, _ := ioutil.ReadAll(fileB)
+				//fmt.Println(string(contentA)) // hello world
+				//fmt.Println(err) // hello world
 
-// 				//XOR PARITY CHUNKS
-// 				Result, _ := Entangler.XORByteSlice(contentA, contentB)
+				//XOR PARITY CHUNKS
+				Result, _ := e.XORByteSlice(contentA, contentB)
 
-// 				allChunks = append(allChunks, Result)
-// 			}
+				allChunks = append(allChunks, Result)
+			}
 
-// 			//Create Result file
-// 			//_, err = os.Create(Entangler.DownloadDirectory + "d" + strconv.Itoa(i))
+			//Create Result file
+			//_, err = os.Create(Entangler.DownloadDirectory + "d" + strconv.Itoa(i))
 
-// 			//Write XOR content to file
-// 			//ioutil.WriteFile(Entangler.DownloadDirectory+"d"+strconv.Itoa(i), Result, 0644)
-// 			continue
-// 		}
-// 		fmt.Print("NOT Missing: " + strconv.Itoa(i) + "\n")
-// 		hash := config["d"+strconv.Itoa(i)]
-// 		fmt.Println(hash)
-// 		dataChunk, err := client.Download(hash, "")
-// 		if err != nil {
-// 			fmt.Println(err.Error())
-// 		}
-// 		content, err := ioutil.ReadAll(dataChunk)
-// 		if err != nil {
-// 			fmt.Println(err.Error())
-// 		}
-// 		allChunks = append(allChunks, content)
-// 		//lastData = i + 1
-// 	}
-// 	fmt.Println("Length of dataIndexes: " + string(strconv.Itoa(len(dataIndexes))))
-// 	fmt.Println("Length of allChunks: " + string(strconv.Itoa(len(allChunks))))
-// 	Entangler.RebuildFile(filePath, allChunks...)
+			//Write XOR content to file
+			//ioutil.WriteFile(Entangler.DownloadDirectory+"d"+strconv.Itoa(i), Result, 0644)
+			continue
+		}
+		fmt.Print("NOT Missing: " + strconv.Itoa(i) + "\n")
+		hash := config["d"+strconv.Itoa(i)]
+		fmt.Println(hash)
+		dataChunk, err := client.Download(hash, "")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		content, err := ioutil.ReadAll(dataChunk)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		allChunks = append(allChunks, content)
+		//lastData = i + 1
+	}
+	fmt.Println("Length of dataIndexes: " + string(strconv.Itoa(len(dataIndexes))))
+	fmt.Println("Length of allChunks: " + string(strconv.Itoa(len(allChunks))))
+	e.RebuildFile(filePath, allChunks...)
 
-// 	return filePath, err
-// }
+	return filePath, err
+}
 
 // func Download() {
 
