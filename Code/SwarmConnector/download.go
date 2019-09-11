@@ -65,23 +65,92 @@ func NewDownloadPool(capacity int, filepath string, endpoint string) *DownloadPo
 	return d
 }
 
-func (p *DownloadPool) DownloadFile(string config) string filepath{
+func (p *DownloadPool) DownloadFile(config string) (filepath string) {
 	filepath = ""
+	done := make(chan struct{})
+	defer close(done)
+	defer close(p.lattice.DataStream)
+	defer close(p.lattice.DataRequest)
 
 	// 1. Construct lattice
 	lattice := data.NewLattice(Entangler.Alpha, Entangler.S, Entangler.P, config)
 
 	// 2. Attempt to download Data Blocks
 
+	for i := 0; i < len(lattice.DataBlocks); i++ {
+		a := func(block *data.Block) {
+			file, err := p.reserve().Client.Download(block.Identifier, "")
+			if err != nil {
+				return
+			}
+			contentA, err := ioutil.ReadAll(file)
+			if err != nil {
+				return
+			}
+			copy(block.Data, contentA)
+		}
+
+		go a(lattice.DataBlocks[i])
+	}
+
 	// 3. Issue repairs if neccesary
+	select {
+	case dl := <-p.lattice.DataStream:
+		if dl.Block.Data == nil {
+			// repair
+		} else {
+			if !dl.Block.IsParity {
+				p.lattice.MissingDataBlocks -= 1
+				if p.lattice.MissingDataBlocks == 0 {
+					done <- struct{}{}
+				}
+			}
+		}
+	case <-done:
+		return // We are ready to rebuild
+	}
 
 	// 4. Rebuild the file
+	p.lattice.
 
 	// 5. Store locally
 
 	// 6. Output file path
 	return
 }
+
+func (l *Lattice) RebuildFile(filePath string) error {
+	if l.MissingDataBlocks != 0 {
+		return errors.New("lattice is missing data blocks")
+	}
+	f, err := os.Create(ChunkDirectory + filePath)
+	if err != nil {
+		os.Exit(1)
+	}
+	w := bufio.NewWriter(f)
+
+	for i := 0; i < len(Chunks); i++ {
+		w.Write(Chunks[i])
+	}
+	w.Flush()
+}
+
+func (l *Lattice) Reconstruct() ([]byte, error) {
+	out := make([]byte, l.NumBlocks)
+	for i := 0; i < l.NumBlocks; i++ {
+		b := l.Blocks[i]
+		if b.IsParity {
+			continue
+		}
+		if b.Data == nil {
+			return nil, errors.New("missing data block")
+		}
+		out = append(out, b.Data[:]...)
+	}
+
+	return out, nil
+}
+
 // Drain drains the pool until it has no more than n resources
 func (p *DownloadPool) Drain(n int) {
 	p.lock.Lock()

@@ -14,22 +14,6 @@ func (l *Lattice) Download(block *data.Block) {
 
 }
 
-func (l *Lattice) Reconstruct() ([]byte, error) {
-	out := make([]byte, l.NumBlocks)
-	for i := 0; i < l.NumBlocks; i++ {
-		b := l.Blocks[i]
-		if b.IsParity {
-			continue
-		}
-		if b.Data == nil {
-			return nil, errors.New("missing data block")
-		}
-		out = append(out, b.Data[:]...)
-	}
-
-	return out, nil
-}
-
 func getMaxStrandMatch(arr []int) (index, max int) {
 	for i := 0; i < len(arr); i++ {
 		if arr[i] > max {
