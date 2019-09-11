@@ -92,14 +92,14 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 
 	// 3. Issue repairs if neccesary
 	select {
-	case dl := <-p.lattice.DataStream:
+	case dl := <-lattice.DataStream:
 		if dl.Block.Data == nil {
 			// repair
-			go p.lattice.HierarchicalRepair(dl.Block)
+			go lattice.HierarchicalRepair(dl.Block)
 		} else {
 			if !dl.Block.IsParity {
-				p.lattice.MissingDataBlocks -= 1
-				if p.lattice.MissingDataBlocks == 0 {
+				lattice.MissingDataBlocks -= 1
+				if lattice.MissingDataBlocks == 0 {
 					done <- struct{}{}
 				}
 			}
@@ -109,7 +109,7 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 	}
 
 	// 4. Rebuild the file
-	return p.lattice.RebuildFile(output)
+	return lattice.RebuildFile(output)
 }
 
 // Drain drains the pool until it has no more than n resources

@@ -119,9 +119,9 @@ func NewLattice(alpha, s, p int, confpath string) *Lattice {
 	blocks = createDataBlocks(conf, dataKeys, blocks, alpha)
 	//copy(datablocks, blocks) // Blocks should be sorted already.
 
-	blocks = append(blocks, createParities(conf, hpKeys, blocks, Horizontal)...)
-	blocks = append(blocks, createParities(conf, rpKeys, blocks, Right)...)
-	blocks = append(blocks, createParities(conf, lpKeys, blocks, Left)...)
+	blocks = createParities(conf, hpKeys, blocks, Horizontal)
+	blocks = createParities(conf, rpKeys, blocks, Right)
+	blocks = createParities(conf, lpKeys, blocks, Left)
 
 	return &Lattice{
 		// DataNodes:   make([]*DataBlock, esize),
