@@ -1,9 +1,32 @@
 package Entangler
 
 import (
+	"bufio"
 	"errors"
+	"os"
 	"time"
 )
+
+func (l *Lattice) RebuildFile(filePath string) error {
+	if l.MissingDataBlocks != 0 {
+		return errors.New("lattice is missing data blocks")
+	}
+	f, err := os.Create(filePath)
+	if err != nil {
+		os.Exit(1)
+	}
+	w := bufio.NewWriter(f)
+
+	for i := 0; i < l.NumDataBlocks; i++ {
+		dat := l.Blocks[i].Data
+		if dat == nil {
+			return errors.New("data is nil")
+		}
+		w.Write(dat)
+	}
+	w.Flush()
+	return nil
+}
 
 func (l *Lattice) Download(block *Block) {
 
