@@ -54,16 +54,17 @@ func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 	if !block.IsParity {
 		strandMatch := make([]int, Alpha)
 		for i := 0; i < Alpha; i++ {
-			if block.Left[i] != nil {
+			if len(block.Left) > i && block.Left[i] != nil && len(block.Left[i].Data) > 0 {
 				strandMatch[i] = strandMatch[i] + 1
 			}
-			if block.Right[i] != nil {
+			fmt.Printf("i is: %d, len is: %d, IsParity: %c\n", i, len(block.Right), block.IsParity)
+			if len(block.Right) > i && block.Right[i] != nil && len(block.Right[i].Data) > 0 {
 				strandMatch[i] = strandMatch[i] + 1
 			}
 		}
-
+		fmt.Printf("Want to repairing block. Pos: %d\n", block.Position)
 		mI, mC := getMaxStrandMatch(strandMatch)
-
+		fmt.Printf("Want to repairing block. Pos: %d, mI: %d, mC: %d\n", block.Position, mI, mC)
 		// Result, _ := Entangler.XORByteSlice(contentA, contentB)
 
 		// If its 2 we already have the parities we need.
@@ -83,14 +84,16 @@ func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 
 			// XOR recovered with already existing
 		} else {
+			fmt.Printf("Repairing block. Pos: %d\n", block.Position)
 			l.HierarchicalRepair(block.Right[mI], nil)
 			l.HierarchicalRepair(block.Left[mI], nil)
 
 			block, _ = l.XORBlocks(block.Left[mI], block.Right[mI])
 		}
 
-		if result != nil {
-			//result <- block
+		if result != nil && block.Data != nil && len(block.Data) != 0 {
+			fmt.Printf("Sending block: %d, back on the channel\n", block.Position)
+			result <- block
 		}
 		return block
 

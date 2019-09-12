@@ -79,7 +79,8 @@ func createParities(conf map[string]string,
 		right, _ := strconv.Atoi(leftright[1])
 
 		b := &Block{IsParity: true, Class: class,
-			Identifier: conf[keyStr], Data: make([]byte, 0, MaxSizeChunk)}
+			Identifier: conf[keyStr], Data: make([]byte, 0, MaxSizeChunk),
+			Left: make([]*Block, 0, 1), Right: make([]*Block, 0, 1)}
 
 		if left > 0 {
 			if dataLeft := blocks[left-1]; dataLeft != nil {
@@ -138,7 +139,7 @@ func NewLattice(alpha, s, p int, confpath string, datarequest chan *DownloadRequ
 		S:                 s,
 		P:                 p,
 		confpath:          confpath,
-		DataStream:        make(chan *Block),
+		DataStream:        make(chan *Block, len(conf)),
 		MaxChunkSize:      3900,
 		DataRequest:       datarequest,
 		//Config:   conf,

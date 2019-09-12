@@ -53,7 +53,7 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 		for {
 			select {
 			case request := <-d.Datarequests:
-				fmt.Printf("GOT DATA REQUEST. IsParity:%c, Pos: %d, Left: %d, Right: %d",
+				fmt.Printf("GOT DATA REQUEST. IsParity:%c, Pos: %d, Left: %d, Right: %d\n",
 					request.Block.IsParity, request.Block.Left[0].Position,
 					request.Block.Right[0].Position, request.Block.Position)
 				go d.DownloadBlock(request.Block, request.Result)
@@ -68,7 +68,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	dl := p.reserve()
 	defer p.release(dl)
 	content := make(chan []byte, 1) // Buffered chan is non-blocking
-
+	//defer close(content)
 	go func() {
 		file, err := dl.Client.Download(block.Identifier, "")
 		if err != nil {
@@ -82,7 +82,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 		content <- contentA
 	}()
 	select {
-	case <-time.After(1 * time.Second):
+	case <-time.After(10 * time.Second):
 		fmt.Printf("TIMEOUT. Position: %d\n", block.Position)
 	case c := <-content:
 		block.Data = c
@@ -101,6 +101,10 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 
 	// 2. Attempt to download Data Blocks
 	for i := 0; i < lattice.NumDataBlocks; i++ {
+		if i == 5 || i == 6 {
+			lattice.DataStream <- lattice.Blocks[i]
+			continue
+		}
 		go p.DownloadBlock(lattice.Blocks[i], lattice.DataStream)
 	}
 
@@ -112,7 +116,11 @@ repairs:
 			if dl.Data == nil || len(dl.Data) == 0 {
 				// repair
 				fmt.Printf("Block was missing. Position: %d\n", dl.Position)
-				go lattice.HierarchicalRepair(dl, lattice.DataStream)
+				if dl.Position < 6 || dl.Position > 30 {
+					go p.DownloadBlock(dl, lattice.DataStream)
+				} else {
+					go lattice.HierarchicalRepair(dl, lattice.DataStream)
+				}
 				//go p.DownloadBlock(dl, lattice.DataStream)
 			} else {
 				fmt.Printf("Download success. Position: %d\n", dl.Position)
