@@ -73,24 +73,52 @@ func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 			// Missing left or right. Repair one of them.
 			if block.Left[mI].Data != nil {
 				// Repair right
-				l.HierarchicalRepair(block.Right[mI])
+				l.HierarchicalRepair(block.Right[mI], nil)
 			} else {
 				// Repair left
-				l.HierarchicalRepair(block.Left[mI])
+				l.HierarchicalRepair(block.Left[mI], nil)
 			}
 			block, _ = l.XORBlocks(block.Left[mI], block.Right[mI])
 
 			// XOR recovered with already existing
 		} else {
-			l.HierarchicalRepair(block.Right[mI])
-			l.HierarchicalRepair(block.Left[mI])
+			l.HierarchicalRepair(block.Right[mI], nil)
+			l.HierarchicalRepair(block.Left[mI], nil)
 
 			block, _ = l.XORBlocks(block.Left[mI], block.Right[mI])
+		}
+		if result != nil {
+			result <- block
 		}
 		return block
 
 	} else {
 		// Parity repair
+		res := make(chan *Block)
+		l.DataRequest <- &DownloadRequest{Block: block, Result: res}
+		select {
+		case dl := <-res:
+			if dl.Data == nil || len(dl.Data) == 0 {
+				// repair
+				fmt.Printf("Block was missing. Position: %d\n", dl.Position)
+				go lattice.HierarchicalRepair(dl, lattice.DataStream)
+				//go p.DownloadBlock(dl, lattice.DataStream)
+			} else {
+				fmt.Printf("Download success. Position: %d\n", dl.Position)
+				if !dl.IsParity {
+					lattice.MissingDataBlocks -= 1
+					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
+
+					if lattice.MissingDataBlocks == 0 {
+						fmt.Printf("Received all data blocks. Position: %d\n", dl.Position)
+						done <- struct{}{}
+					}
+				}
+			}
+		case <-done:
+			fmt.Println("Breaking out..")
+			break repairs // We are ready to rebuild
+		}
 		l.NewDownload(block, func(b *Block, err error) {
 			if err != nil {
 				return

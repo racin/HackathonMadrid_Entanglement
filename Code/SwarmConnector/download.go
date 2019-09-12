@@ -35,7 +35,7 @@ type DownloadPool struct {
 	count    int              // Current count of allocated resources.
 	//Filepath     string           // Final output location
 	endpoint     string
-	datarequests chan *e.DownloadRequest
+	Datarequests chan *e.DownloadRequest
 	datastream   chan *e.DownloadResponse
 }
 
@@ -48,21 +48,14 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 		//Filepath: filepath,
 		endpoint: endpoint,
 	}
-	// go func() {
-	// 	select {
-	// 	case request := <-d.lattice.DataRequest:
-	// 		// look up hash of requested block
-	// 		dl, err := d.reserve().Client.Download(request.Key, "")
-	// 		if err != nil {
-	// 			// Issue repair
-	// 		}
-	// 		contentA, err := ioutil.ReadAll(dl)
-	// 		if err != nil {
-	// 			// Fatal error
-	// 		}
-	// 		d.lattice.DataStream <- &e.DownloadResponse{DownloadRequest: request, Value: contentA}
-	// 	}
-	// }()
+	go func() {
+		for {
+			select {
+			case request := <-d.Datarequests:
+				go d.DownloadBlock(request.Block, request.Result)
+			}
+		}
+	}()
 	return d
 }
 
@@ -100,6 +93,7 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 
 	// 1. Construct lattice
 	lattice := e.NewLattice(e.Alpha, e.S, e.P, config)
+	lattice.DataRequest = p.Datarequests
 
 	// 2. Attempt to download Data Blocks
 	for i := 0; i < lattice.NumDataBlocks; i++ {
