@@ -167,13 +167,14 @@ type ParityBlock struct {
 }
 
 type Block struct {
-	Left       []*Block
-	Right      []*Block
-	Position   int
-	Data       []byte
-	IsParity   bool
-	Class      StrandClass
-	Identifier string
+	Left           []*Block
+	Right          []*Block
+	Position       int
+	Data           []byte
+	IsParity       bool
+	Class          StrandClass
+	Identifier     string
+	DownloadStatus int
 }
 
 type StrandClass int
@@ -183,6 +184,30 @@ const (
 	Right
 	Left
 )
+
+func (b *Block) LeftPos(class int) int {
+	if len(b.Left) > class {
+		return b.Left[class].Position
+	}
+	return 0
+}
+
+func (b *Block) RightPos(class int) int {
+	if len(b.Right) > class {
+		return b.Right[class].Position
+	}
+	return 0
+}
+
+func (b *Block) String() string {
+	return fmt.Sprintf("IsParity:%t, Pos: %d, Left: %d, Right: %d, HasData: %t",
+		b.IsParity, b.Position, b.LeftPos(0),
+		b.RightPos(0), b.HasData())
+}
+
+func (b *Block) HasData() bool {
+	return b.Data != nil && len(b.Data) != 0
+}
 
 // Alpha = 3
 func GetForwardNeighbours(index, S, P int) (r, h, l int) {

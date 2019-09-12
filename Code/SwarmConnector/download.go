@@ -53,9 +53,9 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 		for {
 			select {
 			case request := <-d.Datarequests:
-				fmt.Printf("GOT DATA REQUEST. IsParity:%c, Pos: %d, Left: %d, Right: %d\n",
-					request.Block.IsParity, request.Block.Left[0].Position,
-					request.Block.Right[0].Position, request.Block.Position)
+				// 	fmt.Printf("GOT DATA REQUEST. IsParity:%c, Pos: %d, Left: %d, Right: %d\n",
+				// 		request.Block.IsParity, request.Block.Left[0].Position,
+				// 		request.Block.Right[0].Position, request.Block.Position)
 				go d.DownloadBlock(request.Block, request.Result)
 			}
 		}
@@ -64,13 +64,30 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 }
 
 func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
-	fmt.Printf("Downloading block: %d\n", block.Position)
+	fmt.Printf("GOT DATA REQUEST. %v\n", block.String())
+
+	if block.HasData() {
+		block.DownloadStatus = 2
+		fmt.Printf("Block data already known. %v\n", block.String())
+		result <- block
+		return
+	}
+
+	if block.DownloadStatus != 0 {
+		fmt.Printf("Block download already queued. %v\n", block.String())
+		return
+	}
+
 	dl := p.reserve()
 	defer p.release(dl)
+
+	block.DownloadStatus = 1
+
 	content := make(chan []byte, 1) // Buffered chan is non-blocking
 	//defer close(content)
 	go func() {
 		file, err := dl.Client.Download(block.Identifier, "")
+		block.DownloadStatus = 0
 		if err != nil {
 			return
 		}
@@ -78,12 +95,23 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 		if err != nil {
 			return
 		}
-		fmt.Printf("Completed download of block: %d\n", block.Position)
-		content <- contentA
+		block.DownloadStatus = 2
+		fmt.Printf("Completed download of block. %v\n", block.String())
+
+		// Use Result if we get it.
+		block.Data = contentA
+		p.lattice.DataStream <- block
+		//result <- block
+
+		// Dont use result
+		//content <- contentA
 	}()
 	select {
-	case <-time.After(10 * time.Second):
-		fmt.Printf("TIMEOUT. Position: %d\n", block.Position)
+	//case <-time.After(1 * time.Second):
+	case <-time.After(1000 * time.Millisecond):
+		fmt.Printf("TIMEOUT. IsParity:%t, Pos: %d, Left: %d, Right: %d\n",
+			block.IsParity, block.Position, block.LeftPos(0),
+			block.RightPos(0))
 	case c := <-content:
 		block.Data = c
 	}
@@ -97,6 +125,7 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 
 	// 1. Construct lattice
 	lattice := e.NewLattice(e.Alpha, e.S, e.P, config, p.Datarequests)
+	p.lattice = lattice
 	//lattice.DataRequest = p.Datarequests
 
 	// 2. Attempt to download Data Blocks
@@ -113,7 +142,7 @@ repairs:
 	for {
 		select {
 		case dl := <-lattice.DataStream:
-			if dl.Data == nil || len(dl.Data) == 0 {
+			if !dl.HasData() {
 				// repair
 				fmt.Printf("Block was missing. Position: %d\n", dl.Position)
 				if dl.Position < 6 || dl.Position > 30 {
@@ -125,10 +154,19 @@ repairs:
 			} else {
 				fmt.Printf("Download success. Position: %d\n", dl.Position)
 				if !dl.IsParity {
+					dl.DownloadStatus = 3
 					lattice.MissingDataBlocks -= 1
 					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
 
-					if lattice.MissingDataBlocks == 0 {
+					complete := true
+					for i := 0; i < lattice.NumDataBlocks; i++ {
+						if !lattice.Blocks[i].HasData() {
+							complete = false
+							fmt.Println("BREAKING OUT....")
+							break
+						}
+					}
+					if complete {
 						fmt.Printf("Received all data blocks. Position: %d\n", dl.Position)
 						done <- struct{}{}
 					}
