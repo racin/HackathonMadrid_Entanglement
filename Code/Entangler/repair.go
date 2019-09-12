@@ -13,13 +13,13 @@ func (l *Lattice) RebuildFile(filePath string) error {
 	}
 	f, err := os.Create(filePath)
 	if err != nil {
-		os.Exit(1)
+		return err
 	}
 	w := bufio.NewWriter(f)
 
 	for i := 0; i < l.NumDataBlocks; i++ {
 		dat := l.Blocks[i].Data
-		if dat == nil {
+		if dat == nil || len(dat) == 0 {
 			return errors.New("data is nil")
 		}
 		w.Write(dat)
@@ -42,10 +42,10 @@ func getMaxStrandMatch(arr []int) (index, max int) {
 	return
 }
 
-func (l Lattice) HierarchicalRepair(block *Block) *Block {
+func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 	if block == nil {
 		return nil
-	} else if block.Data != nil {
+	} else if block.Data != nil && len(block.Data) != 0 {
 		return block // No need to repair.
 	}
 

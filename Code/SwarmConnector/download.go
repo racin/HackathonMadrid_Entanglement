@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	//bzzclient "https://github.com/ethereum/go-ethereum/tree/master/swarm/api/client/client.go"
 	bzzclient "github.com/ethereum/go-ethereum/swarm/api/client"
 )
@@ -68,22 +69,31 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	fmt.Printf("Downloading block: %d\n", block.Position)
 	dl := p.reserve()
-	file, err := dl.Client.Download(block.Identifier, "")
-	if err != nil {
-		return
+	defer p.release(dl)
+	content := make(chan []byte, 1) // Buffered chan is non-blocking
+
+	go func() {
+		file, err := dl.Client.Download(block.Identifier, "")
+		if err != nil {
+			return
+		}
+		contentA, err := ioutil.ReadAll(file)
+		if err != nil {
+			return
+		}
+		fmt.Printf("Completed download of block: %d\n", block.Position)
+		content <- contentA
+	}()
+	select {
+	case <-time.After(10 * time.Second):
+		fmt.Printf("TIMEOUT. Position: %d\n", block.Position)
+	case c := <-content:
+		block.Data = c
 	}
-	contentA, err := ioutil.ReadAll(file)
-	if err != nil {
-		return
-	}
-	fmt.Printf("Completed download of block: %d\n", block.Position)
-	//copy(block.Data, contentA)
-	block.Data = contentA
-	p.release(dl)
 	result <- block
 }
 func (p *DownloadPool) DownloadFile(config, output string) error {
-	done := make(chan struct{})
+	done := make(chan struct{}, 1)
 	defer close(done)
 	//	defer close(p.lattice.DataStream)
 	//	defer close(p.lattice.DataRequest)
@@ -97,18 +107,21 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 	}
 
 	// 3. Issue repairs if neccesary
+repairs:
 	for {
 		select {
 		case dl := <-lattice.DataStream:
-			if dl.Data == nil {
+			if dl.Data == nil || len(dl.Data) == 0 {
 				// repair
 				fmt.Printf("Block was missing. Position: %d\n", dl.Position)
-				go lattice.HierarchicalRepair(dl)
+				go lattice.HierarchicalRepair(dl, lattice.DataStream)
+				//go p.DownloadBlock(dl, lattice.DataStream)
 			} else {
 				fmt.Printf("Download success. Position: %d\n", dl.Position)
 				if !dl.IsParity {
-					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
 					lattice.MissingDataBlocks -= 1
+					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
+
 					if lattice.MissingDataBlocks == 0 {
 						fmt.Printf("Received all data blocks. Position: %d\n", dl.Position)
 						done <- struct{}{}
@@ -116,11 +129,12 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 				}
 			}
 		case <-done:
-			break // We are ready to rebuild
+			fmt.Println("Breaking out..")
+			break repairs // We are ready to rebuild
 		}
 	}
 
-	fmt.Printf("Missing blocks: %d. Trying to rebuild\n", lattice.MissingDataBlocks)
+	fmt.Printf("Missing blocks: %d. Trying to rebuild. Path: %s\n", lattice.MissingDataBlocks, output)
 	// 4. Rebuild the file
 	return lattice.RebuildFile(output)
 }
