@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const MaxSizeChunk int = 3900
+
 // s Horizontal strands. p Helical strands
 type Lattice struct {
 	// DataNodes   []*DataBlock
@@ -18,10 +20,11 @@ type Lattice struct {
 	Alpha             int
 	S, P              int
 	DataRequest       chan *DownloadRequest
-	DataStream        chan *DownloadResponse
+	DataStream        chan *Block
 	Config            map[string]string
 	confpath          string
 	MissingDataBlocks int
+	MaxChunkSize      int
 }
 
 // TODO: Exact calculations for strandLen
@@ -75,7 +78,8 @@ func createParities(conf map[string]string,
 		left, _ := strconv.Atoi(leftright[0])
 		right, _ := strconv.Atoi(leftright[1])
 
-		b := &Block{IsParity: true, Class: class, Identifier: conf[keyStr]}
+		b := &Block{IsParity: true, Class: class,
+			Identifier: conf[keyStr], Data: make([]byte, 0, MaxSizeChunk)}
 
 		if left > 0 {
 			if dataLeft := blocks[left-1]; dataLeft != nil {
@@ -103,7 +107,8 @@ func createDataBlocks(conf map[string]string, keys []reflect.Value,
 		b := &Block{Position: pos, IsParity: false,
 			Left:       make([]*Block, 0, alpha),
 			Right:      make([]*Block, 0, alpha),
-			Identifier: conf[keyStr]}
+			Identifier: conf[keyStr],
+			Data:       make([]byte, 0, MaxSizeChunk)}
 		blocks = append(blocks, b)
 	}
 	return blocks
@@ -133,6 +138,8 @@ func NewLattice(alpha, s, p int, confpath string) *Lattice {
 		S:                 s,
 		P:                 p,
 		confpath:          confpath,
+		DataStream:        make(chan *Block),
+		MaxChunkSize:      3900,
 		//Config:   conf,
 	}
 }

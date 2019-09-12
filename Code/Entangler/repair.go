@@ -114,8 +114,8 @@ func (l *Lattice) NewDownload(block *Block, f func(*Block, error)) {
 		case <-time.After(30 * time.Second):
 			f(nil, errors.New("download timeout expired"))
 		case b := <-l.DataStream:
-			if block.IsParity == b.Block.IsParity && block.Position == b.Block.Position && block.Class == b.Block.Class {
-				f(b.Block, nil)
+			if block.IsParity == b.IsParity && block.Position == b.Position && block.Class == b.Class {
+				f(b, nil)
 			}
 		}
 	}()

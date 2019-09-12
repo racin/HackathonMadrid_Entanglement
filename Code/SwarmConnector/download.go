@@ -65,7 +65,7 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 	return d
 }
 
-func (p *DownloadPool) DownloadBlock(block *e.Block) {
+func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	fmt.Printf("Downloading block: %d\n", block.Position)
 	dl := p.reserve()
 	file, err := dl.Client.Download(block.Identifier, "")
@@ -77,8 +77,10 @@ func (p *DownloadPool) DownloadBlock(block *e.Block) {
 		return
 	}
 	fmt.Printf("Completed download of block: %d\n", block.Position)
-	copy(block.Data, contentA)
+	//copy(block.Data, contentA)
+	block.Data = contentA
 	p.release(dl)
+	result <- block
 }
 func (p *DownloadPool) DownloadFile(config, output string) error {
 	done := make(chan struct{})
@@ -91,27 +93,34 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 
 	// 2. Attempt to download Data Blocks
 	for i := 0; i < lattice.NumDataBlocks; i++ {
-		go p.DownloadBlock(lattice.Blocks[i])
+		go p.DownloadBlock(lattice.Blocks[i], lattice.DataStream)
 	}
 
 	// 3. Issue repairs if neccesary
-	select {
-	case dl := <-lattice.DataStream:
-		if dl.Block.Data == nil {
-			// repair
-			go lattice.HierarchicalRepair(dl.Block)
-		} else {
-			if !dl.Block.IsParity {
-				lattice.MissingDataBlocks -= 1
-				if lattice.MissingDataBlocks == 0 {
-					done <- struct{}{}
+	for {
+		select {
+		case dl := <-lattice.DataStream:
+			if dl.Data == nil {
+				// repair
+				fmt.Printf("Block was missing. Position: %d\n", dl.Position)
+				go lattice.HierarchicalRepair(dl)
+			} else {
+				fmt.Printf("Download success. Position: %d\n", dl.Position)
+				if !dl.IsParity {
+					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
+					lattice.MissingDataBlocks -= 1
+					if lattice.MissingDataBlocks == 0 {
+						fmt.Printf("Received all data blocks. Position: %d\n", dl.Position)
+						done <- struct{}{}
+					}
 				}
 			}
+		case <-done:
+			break // We are ready to rebuild
 		}
-	case <-done:
-		break // We are ready to rebuild
 	}
 
+	fmt.Printf("Missing blocks: %d. Trying to rebuild\n", lattice.MissingDataBlocks)
 	// 4. Rebuild the file
 	return lattice.RebuildFile(output)
 }
