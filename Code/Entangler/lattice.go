@@ -139,7 +139,7 @@ func NewLattice(alpha, s, p int, confpath string, datarequest chan *DownloadRequ
 		S:                 s,
 		P:                 p,
 		confpath:          confpath,
-		DataStream:        make(chan *Block, len(conf)),
+		DataStream:        make(chan *Block, len(conf)*5),
 		MaxChunkSize:      3900,
 		DataRequest:       datarequest,
 		//Config:   conf,
@@ -200,9 +200,10 @@ func (b *Block) RightPos(class int) int {
 }
 
 func (b *Block) String() string {
-	return fmt.Sprintf("IsParity:%t, Pos: %d, Left: %d, Right: %d, HasData: %t",
+	return fmt.Sprintf("IsParity:%t, Pos: %d, Left: %d, Right: %d, HasData: %t, DownloadStatus: %d",
 		b.IsParity, b.Position, b.LeftPos(0),
-		b.RightPos(0), b.HasData())
+		b.RightPos(0), b.HasData(),
+		b.DownloadStatus)
 }
 
 func (b *Block) HasData() bool {

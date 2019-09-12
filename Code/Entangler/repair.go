@@ -9,9 +9,9 @@ import (
 )
 
 func (l *Lattice) RebuildFile(filePath string) error {
-	if l.MissingDataBlocks != 0 {
+	/*if l.MissingDataBlocks != 0 {
 		return errors.New("lattice is missing data blocks")
-	}
+	}*/
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -21,7 +21,7 @@ func (l *Lattice) RebuildFile(filePath string) error {
 	for i := 0; i < l.NumDataBlocks; i++ {
 		dat := l.Blocks[i].Data
 		if dat == nil || len(dat) == 0 {
-			return errors.New("data is nil")
+			return errors.New("data is nil. " + l.Blocks[i].String())
 		}
 		w.Write(dat)
 	}
@@ -41,8 +41,10 @@ func getMaxStrandMatch(arr []int) (index, max int) {
 
 func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 	if block == nil {
+		fmt.Printf("Block is nil ?? %v\n", block.String())
 		return nil
 	} else if block.HasData() {
+		fmt.Printf("Block has data. Returning. %v\n", block.String())
 		if result != nil {
 			result <- block
 		}
@@ -127,7 +129,9 @@ func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 					} else if len(block.Left) > 0 && len(block.Left[0].Left) > block.Position {
 						fmt.Printf("Parity repair 3. %v\n", dl.String())
 						leftData := l.HierarchicalRepair(block.Left[0], nil)
+						fmt.Printf("Parity repair 3. Got left data. %v\n", block.Left[0].String())
 						leftParity := l.HierarchicalRepair(block.Left[0].Left[block.Position], nil)
+						fmt.Printf("Parity repair 3. Got left parity. %v\n", block.Left[0].Left[block.Position].String())
 						block, _ = l.XORBlocks(leftData, leftParity)
 						return block
 					} else if len(block.Right) > 0 && len(block.Right[0].Right) > block.Position {

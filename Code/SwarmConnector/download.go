@@ -77,30 +77,25 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 		fmt.Printf("Block download already queued. %v\n", block.String())
 		return
 	}
+	block.DownloadStatus = 1
 
 	dl := p.reserve()
 	defer p.release(dl)
 
-	block.DownloadStatus = 1
-
 	content := make(chan []byte, 1) // Buffered chan is non-blocking
 	//defer close(content)
 	go func() {
-		file, err := dl.Client.Download(block.Identifier, "")
-		block.DownloadStatus = 0
-		if err != nil {
-			return
-		}
-		contentA, err := ioutil.ReadAll(file)
-		if err != nil {
-			return
-		}
-		block.DownloadStatus = 2
-		fmt.Printf("Completed download of block. %v\n", block.String())
+		if file, err := dl.Client.Download(block.Identifier, ""); err == nil {
+			if contentA, err := ioutil.ReadAll(file); err == nil {
+				block.DownloadStatus = 2
+				fmt.Printf("Completed download of block. %v\n", block.String())
 
-		// Use Result if we get it.
-		block.Data = contentA
-		p.lattice.DataStream <- block
+				// Use Result if we get it.
+				block.Data = contentA
+				p.lattice.DataStream <- block
+			}
+		}
+		//block.DownloadStatus = 0
 		//result <- block
 
 		// Dont use result
@@ -108,14 +103,18 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	}()
 	select {
 	//case <-time.After(1 * time.Second):
-	case <-time.After(1000 * time.Millisecond):
+	case <-time.After(10 * time.Millisecond):
 		fmt.Printf("TIMEOUT. IsParity:%t, Pos: %d, Left: %d, Right: %d\n",
 			block.IsParity, block.Position, block.LeftPos(0),
 			block.RightPos(0))
+		result <- block
 	case c := <-content:
-		block.Data = c
+		if !block.HasData() {
+			block.Data = c
+			result <- block
+		}
 	}
-	result <- block
+
 }
 func (p *DownloadPool) DownloadFile(config, output string) error {
 	done := make(chan struct{}, 1)
@@ -152,21 +151,21 @@ repairs:
 				}
 				//go p.DownloadBlock(dl, lattice.DataStream)
 			} else {
-				fmt.Printf("Download success. Position: %d\n", dl.Position)
-				if !dl.IsParity {
+				fmt.Printf("Download success. %v\n", dl.String())
+				if !dl.IsParity && dl.DownloadStatus != 3 {
 					dl.DownloadStatus = 3
-					lattice.MissingDataBlocks -= 1
+					lattice.MissingDataBlocks--
 					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
 
-					complete := true
+					/*complete := true
 					for i := 0; i < lattice.NumDataBlocks; i++ {
 						if !lattice.Blocks[i].HasData() {
 							complete = false
-							fmt.Println("BREAKING OUT....")
+							fmt.Printf("BREAKING OUT....%v\n", lattice.Blocks[i])
 							break
 						}
-					}
-					if complete {
+					}*/
+					if lattice.MissingDataBlocks == 0 {
 						fmt.Printf("Received all data blocks. Position: %d\n", dl.Position)
 						done <- struct{}{}
 					}
