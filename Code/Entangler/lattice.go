@@ -113,7 +113,7 @@ func createDataBlocks(conf map[string]string, keys []reflect.Value,
 	}
 	return blocks
 }
-func NewLattice(alpha, s, p int, confpath string) *Lattice {
+func NewLattice(alpha, s, p int, confpath string, datarequest chan *DownloadRequest) *Lattice {
 	//numBlocks := (1 + alpha) * esize
 	conf, _ := LoadFileStructure(confpath)
 	dataKeys, hpKeys, rpKeys, lpKeys := sortConfigKeys(reflect.ValueOf(conf).MapKeys(), alpha, s, p)
@@ -140,6 +140,7 @@ func NewLattice(alpha, s, p int, confpath string) *Lattice {
 		confpath:          confpath,
 		DataStream:        make(chan *Block),
 		MaxChunkSize:      3900,
+		DataRequest:       datarequest,
 		//Config:   conf,
 	}
 }

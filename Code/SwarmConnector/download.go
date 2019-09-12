@@ -41,7 +41,8 @@ type DownloadPool struct {
 
 func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 	d := &DownloadPool{
-		resource: make(chan *Downloader, capacity),
+		resource:     make(chan *Downloader, capacity),
+		Datarequests: make(chan *e.DownloadRequest),
 		//lattice:  data.NewLattice(Entangler.Alpha, Entangler.S, Entangler.P),
 		Capacity: capacity,
 		count:    0,
@@ -52,6 +53,9 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 		for {
 			select {
 			case request := <-d.Datarequests:
+				fmt.Printf("GOT DATA REQUEST. IsParity:%c, Pos: %d, Left: %d, Right: %d",
+					request.Block.IsParity, request.Block.Left[0].Position,
+					request.Block.Right[0].Position, request.Block.Position)
 				go d.DownloadBlock(request.Block, request.Result)
 			}
 		}
@@ -78,7 +82,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 		content <- contentA
 	}()
 	select {
-	case <-time.After(10 * time.Second):
+	case <-time.After(1 * time.Second):
 		fmt.Printf("TIMEOUT. Position: %d\n", block.Position)
 	case c := <-content:
 		block.Data = c
@@ -92,8 +96,8 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 	//	defer close(p.lattice.DataRequest)
 
 	// 1. Construct lattice
-	lattice := e.NewLattice(e.Alpha, e.S, e.P, config)
-	lattice.DataRequest = p.Datarequests
+	lattice := e.NewLattice(e.Alpha, e.S, e.P, config, p.Datarequests)
+	//lattice.DataRequest = p.Datarequests
 
 	// 2. Attempt to download Data Blocks
 	for i := 0; i < lattice.NumDataBlocks; i++ {
