@@ -67,7 +67,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	fmt.Printf("GOT DATA REQUEST. %v\n", block.String())
 
 	if block.HasData() {
-		block.DownloadStatus = 2
+		//block.DownloadStatus = 2
 		fmt.Printf("Block data already known. %v\n", block.String())
 		result <- block
 		return
@@ -75,6 +75,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 
 	if block.DownloadStatus != 0 {
 		fmt.Printf("Block download already queued. %v\n", block.String())
+		result <- block
 		return
 	}
 	block.DownloadStatus = 1
@@ -87,7 +88,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	go func() {
 		if file, err := dl.Client.Download(block.Identifier, ""); err == nil {
 			if contentA, err := ioutil.ReadAll(file); err == nil {
-				block.DownloadStatus = 2
+				//block.DownloadStatus = 2
 				fmt.Printf("Completed download of block. %v\n", block.String())
 
 				// Use Result if we get it.
@@ -95,7 +96,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 				p.lattice.DataStream <- block
 			}
 		}
-		//block.DownloadStatus = 0
+		block.DownloadStatus = 0
 		//result <- block
 
 		// Dont use result
@@ -136,6 +137,7 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 		go p.DownloadBlock(lattice.Blocks[i], lattice.DataStream)
 	}
 
+	var found string = ""
 	// 3. Issue repairs if neccesary
 repairs:
 	for {
@@ -156,7 +158,7 @@ repairs:
 					dl.DownloadStatus = 3
 					lattice.MissingDataBlocks--
 					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
-
+					found += "," + strconv.Itoa(dl.Position)
 					/*complete := true
 					for i := 0; i < lattice.NumDataBlocks; i++ {
 						if !lattice.Blocks[i].HasData() {
@@ -176,7 +178,7 @@ repairs:
 			break repairs // We are ready to rebuild
 		}
 	}
-
+	fmt.Println(found)
 	fmt.Printf("Missing blocks: %d. Trying to rebuild. Path: %s\n", lattice.MissingDataBlocks, output)
 	// 4. Rebuild the file
 	return lattice.RebuildFile(output)

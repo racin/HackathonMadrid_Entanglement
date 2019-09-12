@@ -86,10 +86,11 @@ func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 			// XOR recovered with already existing
 		} else {
 			fmt.Printf("Repairing block. %v\n", block.String())
-			l.HierarchicalRepair(block.Right[mI], nil)
-			fmt.Printf("Repaired right parity. %v\n", block.Right[mI].String())
+
 			l.HierarchicalRepair(block.Left[mI], nil)
 			fmt.Printf("Repaired left parity. %v\n", block.Left[mI].String())
+			l.HierarchicalRepair(block.Right[mI], nil)
+			fmt.Printf("Repaired right parity. %v\n", block.Right[mI].String())
 
 			block, _ = l.XORBlocks(block.Left[mI], block.Right[mI])
 			fmt.Printf("Reconstructed block. %v\n", block.String())
