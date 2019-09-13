@@ -175,6 +175,7 @@ type Block struct {
 	Class          StrandClass
 	Identifier     string
 	DownloadStatus int
+	WasDownloaded  bool
 }
 
 type StrandClass int

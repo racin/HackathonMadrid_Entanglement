@@ -63,8 +63,38 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 	return d
 }
 
+var unAvailableData map[int]bool = map[int]bool{
+	6:  true,
+	7:  true,
+	11: true,
+	15: true,
+}
+var unAvailableParity map[int][]int = map[int][]int{
+	1:  []int{6, 7, 10},
+	6:  []int{11, 12, 15},
+	7:  []int{12, 13, 11},
+	11: []int{16, 17, 20},
+}
+
 func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	fmt.Printf("GOT DATA REQUEST. %v\n", block.String())
+
+	if unAvailableData[block.Position] {
+		fmt.Printf("UNAVAILABLE DATA BLOCK %v\n", block.String())
+		result <- block
+		return
+	}
+	if block.IsParity && len(block.Left) > 0 && len(block.Right) > 0 {
+		if _, ok := unAvailableParity[block.Left[0].Position]; ok {
+			for i := 0; i < len(unAvailableParity[block.Left[0].Position]); i++ {
+				if unAvailableParity[block.Left[0].Position][i] == block.Right[0].Position {
+					fmt.Printf("UNAVAILABLE PARITY BLOCK %v\n", block.String())
+					result <- block
+					return
+				}
+			}
+		}
+	}
 
 	if block.HasData() {
 		//block.DownloadStatus = 2
@@ -92,11 +122,12 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 				fmt.Printf("Completed download of block. %v\n", block.String())
 
 				// Use Result if we get it.
+				block.WasDownloaded = true
 				block.Data = contentA
 				p.lattice.DataStream <- block
 			}
 		}
-		block.DownloadStatus = 0
+		//block.DownloadStatus = 0
 		//result <- block
 
 		// Dont use result
@@ -130,12 +161,14 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 
 	// 2. Attempt to download Data Blocks
 	for i := 0; i < lattice.NumDataBlocks; i++ {
-		if i == 5 || i == 6 {
-			lattice.DataStream <- lattice.Blocks[i]
-			continue
-		}
+		// if i == 5 || i == 6 {
+		// 	lattice.DataStream <- lattice.Blocks[i]
+		// 	continue
+		// }
 		go p.DownloadBlock(lattice.Blocks[i], lattice.DataStream)
 	}
+
+	datablocks, parityblocks := 0, 0
 
 	var found string = ""
 	// 3. Issue repairs if neccesary
@@ -172,6 +205,15 @@ repairs:
 
 					if complete { //lattice.MissingDataBlocks == 0 {
 						fmt.Printf("Received all data blocks. Position: %d\n", dl.Position)
+						for i := 0; i < len(lattice.Blocks); i++ {
+							if lattice.Blocks[i].HasData() && lattice.Blocks[i].WasDownloaded {
+								if lattice.Blocks[i].IsParity {
+									parityblocks++
+								} else {
+									datablocks++
+								}
+							}
+						}
 						done <- struct{}{}
 					}
 				}
@@ -184,6 +226,8 @@ repairs:
 	fmt.Println(found)
 	fmt.Printf("Missing blocks: %d. Trying to rebuild. Path: %s\n", lattice.MissingDataBlocks, output)
 	// 4. Rebuild the file
+
+	fmt.Printf("Downloaded total. Datablocks: %d, Parityblocks: %d\n", datablocks, parityblocks)
 	return lattice.RebuildFile(output)
 }
 
