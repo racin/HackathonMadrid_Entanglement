@@ -176,6 +176,7 @@ type Block struct {
 	Identifier     string
 	DownloadStatus int
 	WasDownloaded  bool
+	RepairLeft     bool
 }
 
 type StrandClass int
