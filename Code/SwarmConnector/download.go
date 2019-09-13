@@ -70,17 +70,17 @@ var unAvailableData map[int]bool = map[int]bool{
 	15: true,
 }
 var unAvailableParity map[int][]int = map[int][]int{
-	1:  []int{6, 7, 10},
-	6:  []int{11, 12, 15},
-	7:  []int{12, 13, 11},
-	11: []int{16, 17, 20},
+	//	1: []int{6, 7, 10},
+	//6:  []int{11, 12, 15},
+	//7: []int{12, 13, 11},
+	//11: []int{16, 17, 20},
 }
 
 func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
-	fmt.Printf("GOT DATA REQUEST. %v\n", block.String())
+	e.DebugPrint("GOT DATA REQUEST. %v\n", block.String())
 
 	if unAvailableData[block.Position] {
-		fmt.Printf("UNAVAILABLE DATA BLOCK %v\n", block.String())
+		e.DebugPrint("UNAVAILABLE DATA BLOCK %v\n", block.String())
 		result <- block
 		return
 	}
@@ -88,7 +88,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 		if _, ok := unAvailableParity[block.Left[0].Position]; ok {
 			for i := 0; i < len(unAvailableParity[block.Left[0].Position]); i++ {
 				if unAvailableParity[block.Left[0].Position][i] == block.Right[0].Position {
-					fmt.Printf("UNAVAILABLE PARITY BLOCK %v\n", block.String())
+					e.DebugPrint("UNAVAILABLE PARITY BLOCK %v\n", block.String())
 					result <- block
 					return
 				}
@@ -98,13 +98,13 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 
 	if block.HasData() {
 		//block.DownloadStatus = 2
-		fmt.Printf("Block data already known. %v\n", block.String())
+		e.DebugPrint("Block data already known. %v\n", block.String())
 		result <- block
 		return
 	}
 
 	if block.DownloadStatus != 0 {
-		fmt.Printf("Block download already queued. %v\n", block.String())
+		e.DebugPrint("Block download already queued. %v\n", block.String())
 		result <- block
 		return
 	}
@@ -119,7 +119,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 		if file, err := dl.Client.Download(block.Identifier, ""); err == nil {
 			if contentA, err := ioutil.ReadAll(file); err == nil {
 				//block.DownloadStatus = 2
-				fmt.Printf("Completed download of block. %v\n", block.String())
+				e.DebugPrint("Completed download of block. %v\n", block.String())
 
 				// Use Result if we get it.
 				block.WasDownloaded = true
@@ -136,7 +136,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	select {
 	//case <-time.After(1 * time.Second):
 	case <-time.After(1 * time.Millisecond):
-		fmt.Printf("TIMEOUT. IsParity:%t, Pos: %d, Left: %d, Right: %d\n",
+		e.DebugPrint("TIMEOUT. IsParity:%t, Pos: %d, Left: %d, Right: %d\n",
 			block.IsParity, block.Position, block.LeftPos(0),
 			block.RightPos(0))
 		result <- block
@@ -169,8 +169,6 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 	}
 
 	datablocks, parityblocks := 0, 0
-
-	var found string = ""
 	// 3. Issue repairs if neccesary
 repairs:
 	for {
@@ -178,7 +176,7 @@ repairs:
 		case dl := <-lattice.DataStream:
 			if !dl.HasData() {
 				// repair
-				fmt.Printf("Block was missing. Position: %d\n", dl.Position)
+				e.DebugPrint("Block was missing. Position: %d\n", dl.Position)
 				if dl.Position < 6 || dl.Position > 30 {
 					go p.DownloadBlock(dl, lattice.DataStream)
 				} else {
@@ -186,25 +184,24 @@ repairs:
 				}
 				//go p.DownloadBlock(dl, lattice.DataStream)
 			} else {
-				fmt.Printf("Download success. %v\n", dl.String())
+				e.DebugPrint("Download success. %v\n", dl.String())
 				if !dl.IsParity && dl.DownloadStatus != 3 {
 					dl.DownloadStatus = 3
 					lattice.MissingDataBlocks--
-					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
-					found += "," + strconv.Itoa(dl.Position)
+					e.DebugPrint("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
 
 					// Due to concurrency bug. TODO: Fix with lock, counter ?
 					complete := true
 					for i := 0; i < lattice.NumDataBlocks; i++ {
 						if !lattice.Blocks[i].HasData() {
 							complete = false
-							fmt.Printf("BREAKING OUT....%v\n", lattice.Blocks[i])
+							e.DebugPrint("BREAKING OUT....%v\n", lattice.Blocks[i])
 							break
 						}
 					}
 
 					if complete { //lattice.MissingDataBlocks == 0 {
-						fmt.Printf("Received all data blocks. Position: %d\n", dl.Position)
+						e.DebugPrint("Received all data blocks. Position: %d\n", dl.Position)
 						for i := 0; i < len(lattice.Blocks); i++ {
 							if lattice.Blocks[i].HasData() && lattice.Blocks[i].WasDownloaded {
 								if lattice.Blocks[i].IsParity {
@@ -215,16 +212,16 @@ repairs:
 							}
 						}
 						done <- struct{}{}
+						//break repairs
 					}
 				}
 			}
 		case <-done:
-			fmt.Println("Breaking out..")
-			break repairs // We are ready to rebuild
+			//fmt.Println("Breaking out..")
+			break repairs
+			// We are ready to rebuild
 		}
 	}
-	fmt.Println(found)
-	fmt.Printf("Missing blocks: %d. Trying to rebuild. Path: %s\n", lattice.MissingDataBlocks, output)
 	// 4. Rebuild the file
 
 	fmt.Printf("Downloaded total. Datablocks: %d, Parityblocks: %d\n", datablocks, parityblocks)
@@ -254,7 +251,7 @@ func (p *DownloadPool) reserve() *Downloader {
 	select {
 	case d = <-p.resource:
 	default:
-		fmt.Println("Generating new resource")
+		e.DebugPrint("Generating new resource")
 		d = newDownloader(p.endpoint)
 		p.count++
 	}

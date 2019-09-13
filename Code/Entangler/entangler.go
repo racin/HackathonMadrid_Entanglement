@@ -23,7 +23,6 @@ func GetTotalStrands() int {
 }
 
 func init() {
-	fmt.Println("USed?")
 	for i := 0; i < GetTotalStrands(); i++ {
 		ParityMemory[i] = make([]byte, int(MaxChunkSize))
 		//ParityMemory[i] = []byte{0}

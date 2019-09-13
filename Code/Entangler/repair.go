@@ -39,12 +39,19 @@ func getMaxStrandMatch(arr []int) (index, max int) {
 	return
 }
 
+func DebugPrint(format string, a ...interface{}) (int, error) {
+	if false {
+		return fmt.Printf(format, a[:])
+	}
+	return 0, nil
+}
+
 func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 	if block == nil {
-		fmt.Printf("Block is nil ?? %v\n", block.String())
+		DebugPrint("Block is nil ?? %v\n", block.String())
 		return nil
 	} else if block.HasData() {
-		fmt.Printf("Block has data. Returning. %v\n", block.String())
+		DebugPrint("Block has data. Returning. %v\n", block.String())
 		if result != nil {
 			result <- block
 		}
@@ -58,14 +65,14 @@ func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 			if len(block.Left) > i && block.Left[i] != nil && len(block.Left[i].Data) > 0 {
 				strandMatch[i] = strandMatch[i] + 1
 			}
-			fmt.Printf("i is: %d, len is: %d, IsParity: %c\n", i, len(block.Right), block.IsParity)
+			DebugPrint("i is: %d, len is: %d, IsParity: %c\n", i, len(block.Right), block.IsParity)
 			if len(block.Right) > i && block.Right[i] != nil && len(block.Right[i].Data) > 0 {
 				strandMatch[i] = strandMatch[i] + 1
 			}
 		}
-		fmt.Printf("Want to repairing block. Pos: %d\n", block.Position)
+		DebugPrint("Want to repairing block. Pos: %d\n", block.Position)
 		mI, mC := getMaxStrandMatch(strandMatch)
-		fmt.Printf("Want to repairing block. Pos: %d, mI: %d, mC: %d\n", block.Position, mI, mC)
+		DebugPrint("Want to repairing block. Pos: %d, mI: %d, mC: %d\n", block.Position, mI, mC)
 		// Result, _ := Entangler.XORByteSlice(contentA, contentB)
 
 		// If its 2 we already have the parities we need.
@@ -85,26 +92,25 @@ func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 
 			// XOR recovered with already existing
 		} else {
-			fmt.Printf("Repairing block. %v\n", block.String())
+			DebugPrint("Repairing block. %v\n", block.String())
 
 			l.HierarchicalRepair(block.Left[mI], nil)
-			fmt.Printf("Repaired left parity. %v\n", block.Left[mI].String())
+			DebugPrint("Repaired left parity. %v\n", block.Left[mI].String())
 			l.HierarchicalRepair(block.Right[mI], nil)
-			fmt.Printf("Repaired right parity. %v\n", block.Right[mI].String())
+			DebugPrint("Repaired right parity. %v\n", block.Right[mI].String())
 
 			block, _ = l.XORBlocks(block.Left[mI], block.Right[mI])
-			fmt.Printf("Reconstructed block. %v\n", block.String())
+			DebugPrint("Reconstructed block. %v\n", block.String())
 		}
 
 		if result != nil && block.HasData() {
-			fmt.Printf("Sending block: %d, back on the channel\n", block.Position)
+			DebugPrint("Sending block: %d, back on the channel\n", block.Position)
 			result <- block
 		}
 		return block
 
 	} else {
 		// Parity repair
-		fmt.Println("test")
 		res := make(chan *Block)
 		defer close(res)
 		l.DataRequest <- &DownloadRequest{Block: block, Result: res}
@@ -113,42 +119,42 @@ func (l Lattice) HierarchicalRepair(block *Block, result chan *Block) *Block {
 			case dl := <-res:
 				if !dl.HasData() {
 					// repair
-					fmt.Printf("Parity Block was missing. %v\n", dl.String())
+					DebugPrint("Parity Block was missing. %v\n", dl.String())
 
 					// Try to request parity
 					//if block.Left[0].HasData() && block.Left[0].Left[block.Position].HasData() { // Closed lattice
 					if len(block.Left) > 0 && block.Left[0].HasData() && len(block.Left[0].Left) > block.Position && block.Left[0].Left[block.Position].HasData() {
-						fmt.Printf("Parity repair 1. %v\n", dl.String())
+						DebugPrint("Parity repair 1. %v\n", dl.String())
 						block, _ = l.XORBlocks(block.Left[0], block.Left[0].Left[block.Position])
 						return block
 						//} else if block.Right[0].HasData() && block.Right[0].Right[block.Position].HasData() { // Closed lattice
 					} else if len(block.Right) > 0 && block.Right[0].HasData() && len(block.Right[0].Right) > block.Position && block.Right[0].Right[block.Position].HasData() {
-						fmt.Printf("Parity repair 2. %v\n", dl.String())
+						DebugPrint("Parity repair 2. %v\n", dl.String())
 						block, _ = l.XORBlocks(block.Right[0].Right[block.Position], block.Right[0])
 						return block
 						//} else { // Closed lattice
-					} else if len(block.Left) > 0 && len(block.Left[0].Left) > block.Position && !block.RepairLeft {
+					} else if len(block.Left) > 0 && len(block.Left[0].Left) > block.Position {
 						block.RepairLeft = true
-						fmt.Printf("Parity repair 3. %v\n", dl.String())
+						DebugPrint("Parity repair 3. %v\n", dl.String())
 						leftData := l.HierarchicalRepair(block.Left[0], nil)
-						fmt.Printf("Parity repair 3. Got left data. %v\n", block.Left[0].String())
+						DebugPrint("Parity repair 3. Got left data. %v\n", block.Left[0].String())
 						leftParity := l.HierarchicalRepair(block.Left[0].Left[block.Position], nil)
-						fmt.Printf("Parity repair 3. Got left parity. %v\n", block.Left[0].Left[block.Position].String())
+						DebugPrint("Parity repair 3. Got left parity. %v\n", block.Left[0].Left[block.Position].String())
 						block, _ = l.XORBlocks(leftData, leftParity)
 						block.RepairLeft = false
 						return block
 					} else if len(block.Right) > 0 && len(block.Right[0].Right) > block.Position {
-						fmt.Printf("Parity repair 4. %v\n", dl.String())
+						DebugPrint("Parity repair 4. %v\n", dl.String())
 						rightData := l.HierarchicalRepair(block.Right[0], nil)
 						rightParity := l.HierarchicalRepair(block.Right[0].Right[block.Position], nil)
 						block, _ = l.XORBlocks(rightData, rightParity)
 						return block
 					} else {
-						fmt.Printf("Parity repair 5. %v\n", block.String())
+						DebugPrint("Parity repair 5. %v\n", block.String())
 						l.DataRequest <- &DownloadRequest{Block: block, Result: res} // Because open lattice.
 					}
 				} else {
-					fmt.Printf("Parity download success. %v\n", dl.String())
+					DebugPrint("Parity download success. %v\n", dl.String())
 					return dl
 				}
 			}
