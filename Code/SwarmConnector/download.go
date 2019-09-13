@@ -104,7 +104,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	}()
 	select {
 	//case <-time.After(1 * time.Second):
-	case <-time.After(10 * time.Millisecond):
+	case <-time.After(1 * time.Millisecond):
 		fmt.Printf("TIMEOUT. IsParity:%t, Pos: %d, Left: %d, Right: %d\n",
 			block.IsParity, block.Position, block.LeftPos(0),
 			block.RightPos(0))
@@ -159,15 +159,18 @@ repairs:
 					lattice.MissingDataBlocks--
 					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
 					found += "," + strconv.Itoa(dl.Position)
-					/*complete := true
+
+					// Due to concurrency bug. TODO: Fix with lock, counter ?
+					complete := true
 					for i := 0; i < lattice.NumDataBlocks; i++ {
 						if !lattice.Blocks[i].HasData() {
 							complete = false
 							fmt.Printf("BREAKING OUT....%v\n", lattice.Blocks[i])
 							break
 						}
-					}*/
-					if lattice.MissingDataBlocks == 0 {
+					}
+
+					if complete { //lattice.MissingDataBlocks == 0 {
 						fmt.Printf("Received all data blocks. Position: %d\n", dl.Position)
 						done <- struct{}{}
 					}
