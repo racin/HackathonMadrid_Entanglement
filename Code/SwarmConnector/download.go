@@ -64,16 +64,16 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 }
 
 var unAvailableData map[int]bool = map[int]bool{
-	6:  true,
+	//6:  true,
 	7:  true,
 	11: true,
 	15: true,
 }
 var unAvailableParity map[int][]int = map[int][]int{
-	//	1: []int{6, 7, 10},
-	//6:  []int{11, 12, 15},
-	//7: []int{12, 13, 11},
-	//11: []int{16, 17, 20},
+	//1:  []int{6, 7, 10},
+	//6: []int{11, 12, 15},
+	//7:  []int{12, 13, 11},
+	11: []int{16, 17, 20},
 }
 
 func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
@@ -135,10 +135,8 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	}()
 	select {
 	//case <-time.After(1 * time.Second):
-	case <-time.After(1 * time.Millisecond):
-		e.DebugPrint("TIMEOUT. IsParity:%t, Pos: %d, Left: %d, Right: %d\n",
-			block.IsParity, block.Position, block.LeftPos(0),
-			block.RightPos(0))
+	case <-time.After(1000 * time.Millisecond):
+		e.DebugPrint("TIMEOUT.%v\n", block.String())
 		result <- block
 	case c := <-content:
 		if !block.HasData() {
@@ -146,25 +144,14 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 			result <- block
 		}
 	}
-
 }
 func (p *DownloadPool) DownloadFile(config, output string) error {
-	done := make(chan struct{}, 1)
-	defer close(done)
-	//	defer close(p.lattice.DataStream)
-	//	defer close(p.lattice.DataRequest)
-
 	// 1. Construct lattice
 	lattice := e.NewLattice(e.Alpha, e.S, e.P, config, p.Datarequests)
 	p.lattice = lattice
-	//lattice.DataRequest = p.Datarequests
 
 	// 2. Attempt to download Data Blocks
 	for i := 0; i < lattice.NumDataBlocks; i++ {
-		// if i == 5 || i == 6 {
-		// 	lattice.DataStream <- lattice.Blocks[i]
-		// 	continue
-		// }
 		go p.DownloadBlock(lattice.Blocks[i], lattice.DataStream)
 	}
 
@@ -176,7 +163,7 @@ repairs:
 		case dl := <-lattice.DataStream:
 			if !dl.HasData() {
 				// repair
-				e.DebugPrint("Block was missing. Position: %d\n", dl.Position)
+				//e.DebugPrint("Block was missing. Position: %d\n", dl.Position)
 				if dl.Position < 6 || dl.Position > 30 {
 					go p.DownloadBlock(dl, lattice.DataStream)
 				} else {
@@ -188,7 +175,7 @@ repairs:
 				if !dl.IsParity && dl.DownloadStatus != 3 {
 					dl.DownloadStatus = 3
 					lattice.MissingDataBlocks--
-					e.DebugPrint("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
+					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
 
 					// Due to concurrency bug. TODO: Fix with lock, counter ?
 					complete := true
@@ -196,6 +183,7 @@ repairs:
 						if !lattice.Blocks[i].HasData() {
 							complete = false
 							e.DebugPrint("BREAKING OUT....%v\n", lattice.Blocks[i])
+							//go lattice.HierarchicalRepair(lattice.Blocks[i], lattice.DataStream)
 							break
 						}
 					}
@@ -211,15 +199,10 @@ repairs:
 								}
 							}
 						}
-						done <- struct{}{}
-						//break repairs
+						break repairs
 					}
 				}
 			}
-		case <-done:
-			//fmt.Println("Breaking out..")
-			break repairs
-			// We are ready to rebuild
 		}
 	}
 	// 4. Rebuild the file

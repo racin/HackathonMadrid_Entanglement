@@ -177,6 +177,7 @@ type Block struct {
 	DownloadStatus int
 	WasDownloaded  bool
 	RepairLeft     bool
+	Repair         bool
 }
 
 type StrandClass int
@@ -202,6 +203,9 @@ func (b *Block) RightPos(class int) int {
 }
 
 func (b *Block) String() string {
+	if b.Position != 11 && b.LeftPos(0) != 11 && b.RightPos(0) != 11 {
+		return ""
+	}
 	return fmt.Sprintf("IsParity:%t, Pos: %d, Left: %d, Right: %d, HasData: %t, DownloadStatus: %d",
 		b.IsParity, b.Position, b.LeftPos(0),
 		b.RightPos(0), b.HasData(),
