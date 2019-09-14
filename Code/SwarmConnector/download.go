@@ -68,12 +68,14 @@ var unAvailableData map[int]bool = map[int]bool{
 	7:  true,
 	11: true,
 	15: true,
+	16: true,
 }
 var unAvailableParity map[int][]int = map[int][]int{
 	//1:  []int{6, 7, 10},
-	//6: []int{11, 12, 15},
+	6: []int{11, 12, 15},
 	//7:  []int{12, 13, 11},
 	11: []int{16, 17, 20},
+	16: []int{21},
 }
 
 func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
@@ -161,13 +163,19 @@ repairs:
 	for {
 		select {
 		case dl := <-lattice.DataStream:
-			if !dl.HasData() {
+			if dl == nil {
+				fmt.Println("FATAL ERROR. STOPPING DOWNLOAD.")
+				// Try new strategy?
+				//os.Exit(0)
+				break repairs
+			} else if !dl.HasData() {
 				// repair
 				//e.DebugPrint("Block was missing. Position: %d\n", dl.Position)
 				if dl.Position < 6 || dl.Position > 30 {
 					go p.DownloadBlock(dl, lattice.DataStream)
 				} else {
-					go lattice.HierarchicalRepair(dl, lattice.DataStream)
+					fmt.Printf("Repairing. %v\n", dl.String())
+					go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
 				}
 				//go p.DownloadBlock(dl, lattice.DataStream)
 			} else {
@@ -182,7 +190,7 @@ repairs:
 					for i := 0; i < lattice.NumDataBlocks; i++ {
 						if !lattice.Blocks[i].HasData() {
 							complete = false
-							e.DebugPrint("BREAKING OUT....%v\n", lattice.Blocks[i])
+							//e.DebugPrint("BREAKING OUT....%v\n", lattice.Blocks[i])
 							//go lattice.HierarchicalRepair(lattice.Blocks[i], lattice.DataStream)
 							break
 						}
