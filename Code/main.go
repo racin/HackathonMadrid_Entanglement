@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func uploadFile(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +108,8 @@ func main() {
 	fmt.Println("Hello World")
 	dp := SwarmConnector.NewDownloadPool(100, "https://swarm-gateways.net")
 	fmt.Println("Created Datapool")
-	err := dp.DownloadFile("../retrives.txt", "../files/main.jpeg")
+	t := time.Now().Unix()
+	err := dp.DownloadFile("../retrives.txt", "../files/main_"+fmt.Sprintf("%d", t)+".jpeg")
 	fmt.Println("Downloaded file")
 	if err != nil {
 		fmt.Println(err.Error())

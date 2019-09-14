@@ -48,13 +48,13 @@ func DebugPrint(format string, a ...interface{}) (int, error) {
 	if ok && z == "" {
 		return 0, nil
 	}
-	if true {
-		return fmt.Printf(format, a)
+	if false {
+		return fmt.Printf(format, a...)
 	}
 	return 0, nil
 }
 
-func (l Lattice) HierarchicalRepair(block *Block, result chan *Block, path []*Block) *Block {
+func (l *Lattice) HierarchicalRepair(block *Block, result chan *Block, path []*Block) *Block {
 	if block == nil {
 		DebugPrint("Block is nil ?? %v\n", block.String())
 		return nil
@@ -80,68 +80,62 @@ func (l Lattice) HierarchicalRepair(block *Block, result chan *Block, path []*Bl
 
 	// Data repair
 	if !block.IsParity {
-		strandMatch := make([]int, Alpha)
-		for i := 0; i < Alpha; i++ {
-			if len(block.Left) > i && block.Left[i].HasData() {
-				strandMatch[i] = strandMatch[i] + 1
-			}
-			DebugPrint("i is: %d, len is: %d, IsParity: %c\n", i, len(block.Right), block.IsParity)
-			if len(block.Right) > i && block.Right[i].HasData() {
-				strandMatch[i] = strandMatch[i] + 1
-			}
-		}
-		mI, mC := getMaxStrandMatch(strandMatch)
-		fmt.Printf("Want to repairing block. Pos: %d, mI: %d, mC: %d\n", block.Position, mI, mC)
-		// Result, _ := Entangler.XORByteSlice(contentA, contentB)
-
-		// If its 2 we already have the parities we need.
-		if mC == 1 {
+		for i := 0; i < l.Alpha; i++ {
+			DebugPrint("Repairing block. %v, Alpha: %v\n", block.String(), i)
 			// Missing left or right. Repair one of them.
-			if block.Left[mI].HasData() {
+			if len(block.Right) > i {
 				// Repair right
-				l.HierarchicalRepair(block.Right[mI], nil, append(path, block))
-			}
-			if block.Right[mI].HasData() {
-				// Repair left
-				l.HierarchicalRepair(block.Left[mI], nil, append(path, block))
-			}
-			if block.Left[mI].HasData() && block.Right[mI].HasData() {
-				block, _ = l.XORBlocks(block.Left[mI], block.Right[mI])
-			}
-
-			// XOR recovered with already existing
-		} else if mC == 0 {
-			DebugPrint("Repairing block. %v\n", block.String())
-
-			l.HierarchicalRepair(block.Left[mI], nil, append(path, block))
-			DebugPrint("Repaired left parity. %v\n", block.Left[mI].String())
-
-			l.HierarchicalRepair(block.Right[mI], nil, append(path, block))
-			DebugPrint("Repaired right parity. %v\n", block.Right[mI].String())
-
-		}
-
-		if block.Left[mI].HasData() && block.Right[mI].HasData() {
-			block, _ = l.XORBlocks(block.Left[mI], block.Right[mI])
-			DebugPrint("Reconstructed block. %v\n", block.String())
-		}
-
-		if result != nil {
-			if block.HasData() {
-				DebugPrint("Sending block: %d, back on the channel\n", block.Position)
-				result <- block
+				l.HierarchicalRepair(block.Right[i], nil, append(path, block))
 			} else {
-				// Fatal error.. Could not repair
-				DebugPrint("DID NOT FIND ANY WAY TO REPAIR BLOCK. ??? :-( %v\n", block.String())
-				result <- nil
+				if result != nil {
+					result <- nil
+				}
+
+				return block // Can not repair extreme (yet..)
+			}
+
+			if len(block.Left) > i {
+				// Repair left
+				l.HierarchicalRepair(block.Left[i], nil, append(path, block))
+			} else if block.Right[i].HasData() {
+				// First data is equal to first parity (yet...)
+				block.Data = block.Right[i].Data
+				if result != nil {
+					result <- block
+				}
+
+				return block
+			}
+
+			if len(block.Left) > i && block.Left[i].HasData() && len(block.Right) > i && block.Right[i].HasData() {
+				block, _ = l.XORBlocks(block.Left[i], block.Right[i])
+				DebugPrint("Reconstructed block. %v\n", block.String())
+			}
+
+			if result != nil {
+				if block.HasData() {
+					DebugPrint("Sending block: %d, back on the channel\n", block.Position)
+					result <- block
+					return block
+				} else if i == l.Alpha-1 {
+					// Exhausted all possibilities.
+					// Wait indefinately for file ?
+
+					// Fatal error.. Could not repair
+					DebugPrint("DID NOT FIND ANY WAY TO REPAIR BLOCK. ??? :-( %v\n", block.String())
+					if result != nil {
+						result <- block
+					}
+					//result <- nil
+					//return block
+				}
 			}
 		}
-		return block
 
 	} else {
 		// Parity repair
 		res := make(chan *Block)
-		defer close(res)
+		//defer close(res)
 		l.DataRequest <- &DownloadRequest{Block: block, Result: res}
 		for {
 			select {
@@ -199,9 +193,9 @@ func (l Lattice) HierarchicalRepair(block *Block, result chan *Block, path []*Bl
 				}
 			}
 		}
-
-		return block
 	}
+
+	return block
 }
 
 // func (l *Lattice) NewDownload(block *Block, f func(*Block, error)) {
@@ -249,10 +243,10 @@ func (l *Lattice) XORBlocks(a *Block, b *Block) (*Block, error) {
 		data, parity = b, a
 	}
 
-	if data.Right[parity.Class] == parity { // Reconstruct left parity
+	if len(data.Right) > int(parity.Class) && data.Right[parity.Class] == parity { // Reconstruct left parity
 		data.Left[parity.Class].Data, err = XORByteSlice(data.Data, parity.Data)
 		return data.Left[parity.Class], err
-	} else if data.Left[parity.Class] == parity { // Reconstruct right parity
+	} else if len(data.Left) > int(parity.Class) && data.Left[parity.Class] == parity { // Reconstruct right parity
 		data.Right[parity.Class].Data, err = XORByteSlice(data.Data, parity.Data)
 		return data.Right[parity.Class], err
 	} else {

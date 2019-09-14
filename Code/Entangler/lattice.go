@@ -187,9 +187,6 @@ const (
 )
 
 func (b *Block) LeftPos(class int) int {
-	if b.Left == nil {
-		fmt.Println("?????? ")
-	}
 	if len(b.Left) > class {
 		return b.Left[class].Position
 	}
@@ -214,7 +211,7 @@ func (b *Block) String() string {
 }
 
 func (b *Block) HasData() bool {
-	return b.Data != nil && len(b.Data) != 0
+	return b != nil && b.Data != nil && len(b.Data) != 0
 }
 
 // Alpha = 3
