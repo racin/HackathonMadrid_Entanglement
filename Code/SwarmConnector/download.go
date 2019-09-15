@@ -126,7 +126,9 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 				// Use Result if we get it.
 				block.WasDownloaded = true
 				block.Data = contentA
+				content <- contentA
 				p.lattice.DataStream <- block
+
 			}
 		}
 		block.DownloadStatus = 0
@@ -137,12 +139,11 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	}()
 	select {
 	//case <-time.After(1 * time.Second):
-	case <-time.After(1000 * time.Millisecond):
-		e.DebugPrint("TIMEOUT.%v\n", block.String())
+	case <-time.After(2000 * time.Millisecond):
+		//e.DebugPrint("TIMEOUT.%v\n", block.String())
 		result <- block
-	case c := <-content:
-		if !block.HasData() {
-			block.Data = c
+	case <-content:
+		if block.HasData() {
 			result <- block
 		}
 	}
@@ -171,12 +172,11 @@ repairs:
 			} else if !dl.HasData() {
 				// repair
 				//e.DebugPrint("Block was missing. Position: %d\n", dl.Position)
-				if dl.Position < 6 || dl.Position > 30 { // Closed lattice ..
+				if dl.Position < 6 || dl.Position > 244 { // Closed lattice ..
 					go p.DownloadBlock(dl, lattice.DataStream)
 				} else {
-					fmt.Printf("Repairing. %v\n", dl.String())
-					//go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
-					go lattice.RoundrobinRepair(dl, lattice.DataStream, make([]*e.Block, 0))
+					go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
+					//go lattice.RoundrobinRepair(dl, lattice.DataStream, make([]*e.Block, 0))
 				}
 				//go p.DownloadBlock(dl, lattice.DataStream)
 			} else {
@@ -184,7 +184,7 @@ repairs:
 				if !dl.IsParity && dl.DownloadStatus != 3 {
 					dl.DownloadStatus = 3
 					lattice.MissingDataBlocks--
-					fmt.Printf("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
+					e.DebugPrint("Data block download success. Position: %d. Missing: %d\n", dl.Position, lattice.MissingDataBlocks)
 
 					// Due to concurrency bug. TODO: Fix with lock, counter ?
 					complete := true

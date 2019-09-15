@@ -105,9 +105,7 @@ func setupRoutes() {
 }
 
 func main() {
-	fmt.Println("Hello World")
-	dp := SwarmConnector.NewDownloadPool(100, "https://swarm-gateways.net")
-	fmt.Println("Created Datapool")
+	dp := SwarmConnector.NewDownloadPool(1000, "https://swarm-gateways.net")
 	t := time.Now().Unix()
 	err := dp.DownloadFile("../retrives.txt", "../files/main_"+fmt.Sprintf("%d", t)+".jpeg")
 	fmt.Println("Downloaded file")
@@ -115,4 +113,28 @@ func main() {
 		fmt.Println(err.Error())
 	}
 	//setupRoutes()
+	//upload("/home/gob/Desktop/Ålgård_Station.jpg", "AlgardStasjon.jpg")
+}
+
+func upload(filepath string, filename string) {
+	// read all of the contents of our uploaded file into a
+	// byte array
+	fileBytes, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	if _, err := os.Create(Entangler.TempDirectory + filename); err == nil {
+
+	} else {
+		fmt.Println("Fatal error ... " + err.Error())
+		os.Exit(1)
+	}
+	ioutil.WriteFile(Entangler.TempDirectory+filename, fileBytes, os.ModeAppend)
+
+	// Chunker & Entangler
+	Entangler.EntangleFile(Entangler.TempDirectory + filename)
+
+	// Upload
+	SwarmConnector.UploadAllChunks()
 }

@@ -276,7 +276,6 @@ func (l *Lattice) RoundrobinRepair(block *Block, result chan *Block, path []*Blo
 				select {
 				case dl := <-res:
 					if !dl.HasData() {
-						fmt.Println(" ??? ")
 						break roundrobinrepair
 					}
 					if j == 1 {
@@ -294,7 +293,6 @@ func (l *Lattice) RoundrobinRepair(block *Block, result chan *Block, path []*Blo
 				}
 			}
 		}
-		fmt.Println("HIERARCHICAL..")
 		return l.HierarchicalRepair(block, result, path)
 	}
 

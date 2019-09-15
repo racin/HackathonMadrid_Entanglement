@@ -40,8 +40,6 @@ func sortConfigKeys(keys []reflect.Value, alpha, s, p int) ([]reflect.Value, []r
 		keyStr := key.String()
 		isParity := keyStr[:1] == "p"
 		position := keyStr[1:]
-		fmt.Printf("isParity: %c\n", isParity)
-		fmt.Println("position: " + position)
 		if isParity {
 			leftright := strings.Split(position, "_")
 			left, _ := strconv.Atoi(leftright[0])
@@ -69,10 +67,8 @@ func sortConfigKeys(keys []reflect.Value, alpha, s, p int) ([]reflect.Value, []r
 func createParities(conf map[string]string,
 	keys []reflect.Value, blocks []*Block,
 	class StrandClass) []*Block {
-	fmt.Printf("Create parities. Class: %d\n", class)
 	for _, key := range keys {
 		keyStr := key.String()
-		fmt.Println("Key: " + keyStr)
 		position := keyStr[1:]
 		leftright := strings.Split(position, "_")
 		left, _ := strconv.Atoi(leftright[0])
