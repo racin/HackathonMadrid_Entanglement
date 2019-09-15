@@ -175,7 +175,8 @@ repairs:
 					go p.DownloadBlock(dl, lattice.DataStream)
 				} else {
 					fmt.Printf("Repairing. %v\n", dl.String())
-					go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
+					//go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
+					go lattice.RoundrobinRepair(dl, lattice.DataStream, make([]*e.Block, 0))
 				}
 				//go p.DownloadBlock(dl, lattice.DataStream)
 			} else {
