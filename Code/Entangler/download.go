@@ -7,8 +7,9 @@ import (
 )
 
 type DownloadRequest struct {
-	Result chan *Block
-	Block  *Block
+	Timeout chan *Block
+	Result  chan *Block
+	Block   *Block
 }
 
 func GetSwarmHash(block *Block, fs *map[string]string) string {

@@ -36,6 +36,7 @@ type DownloadPool struct {
 	//Filepath     string           // Final output location
 	endpoint     string
 	Datarequests chan *e.DownloadRequest
+	DataTimeout  chan *e.Block
 	datastream   chan *e.DownloadResponse
 }
 
@@ -43,6 +44,7 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 	d := &DownloadPool{
 		resource:     make(chan *Downloader, capacity),
 		Datarequests: make(chan *e.DownloadRequest),
+		DataTimeout:  make(chan *e.Block, 5),
 		//lattice:  data.NewLattice(Entangler.Alpha, Entangler.S, Entangler.P),
 		Capacity: capacity,
 		count:    0,
@@ -56,7 +58,7 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 				// 	fmt.Printf("GOT DATA REQUEST. IsParity:%c, Pos: %d, Left: %d, Right: %d\n",
 				// 		request.Block.IsParity, request.Block.Left[0].Position,
 				// 		request.Block.Right[0].Position, request.Block.Position)
-				go d.DownloadBlock(request.Block, request.Result)
+				go d.DownloadBlock(request.Block, request.Result, request.Timeout)
 			}
 		}
 	}()
@@ -78,20 +80,20 @@ var unAvailableParity map[int][]int = map[int][]int{
 	16: []int{21, 25},
 }
 
-func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
+func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block, timeout chan *e.Block) {
 	e.DebugPrint("GOT DATA REQUEST. %v\n", block.String())
 
 	if unAvailableData[block.Position] {
-		e.DebugPrint("UNAVAILABLE DATA BLOCK %v\n", block.String())
-		result <- block
+		e.DebugPrint("unAvailableData. %v\n", block.String())
+		timeout <- block
 		return
 	}
 	if block.IsParity && len(block.Left) > 0 && len(block.Right) > 0 {
 		if _, ok := unAvailableParity[block.Left[0].Position]; ok {
 			for i := 0; i < len(unAvailableParity[block.Left[0].Position]); i++ {
 				if unAvailableParity[block.Left[0].Position][i] == block.Right[0].Position {
-					e.DebugPrint("UNAVAILABLE PARITY BLOCK %v\n", block.String())
-					result <- block
+					e.DebugPrint("unAvailableParity. %v\n", block.String())
+					timeout <- block
 					return
 				}
 			}
@@ -107,7 +109,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 
 	if block.DownloadStatus != 0 {
 		e.DebugPrint("Block download already queued. %v\n", block.String())
-		result <- block
+		timeout <- block
 		return
 	}
 	block.DownloadStatus = 1
@@ -126,7 +128,8 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 				// Use Result if we get it.
 				block.WasDownloaded = true
 				block.Data = contentA
-				p.lattice.DataStream <- block
+				//p.lattice.DataStream <- block
+				content <- contentA
 			}
 		}
 		block.DownloadStatus = 0
@@ -139,9 +142,9 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	//case <-time.After(1 * time.Second):
 	case <-time.After(1000 * time.Millisecond):
 		e.DebugPrint("TIMEOUT.%v\n", block.String())
-		result <- block
+		timeout <- block
 	case c := <-content:
-		if !block.HasData() {
+		if block.HasData() {
 			block.Data = c
 			result <- block
 		}
@@ -154,7 +157,7 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 
 	// 2. Attempt to download Data Blocks
 	for i := 0; i < lattice.NumDataBlocks; i++ {
-		go p.DownloadBlock(lattice.Blocks[i], lattice.DataStream)
+		go p.DownloadBlock(lattice.Blocks[i], lattice.DataStream, p.DataTimeout)
 	}
 
 	datablocks, parityblocks := 0, 0
@@ -162,22 +165,19 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 repairs:
 	for {
 		select {
+		case dl := <-p.DataTimeout:
+			if dl.Position < 6 || dl.Position > 30 { // Closed lattice ..
+				go p.DownloadBlock(dl, lattice.DataStream, p.DataTimeout)
+			} else {
+				fmt.Printf("Repairing. %v\n", dl.String())
+				go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
+			}
 		case dl := <-lattice.DataStream:
 			if dl == nil {
 				fmt.Println("FATAL ERROR. STOPPING DOWNLOAD.")
 				// Try new strategy?
 				os.Exit(0)
 				break repairs
-			} else if !dl.HasData() {
-				// repair
-				//e.DebugPrint("Block was missing. Position: %d\n", dl.Position)
-				if dl.Position < 6 || dl.Position > 30 { // Closed lattice ..
-					go p.DownloadBlock(dl, lattice.DataStream)
-				} else {
-					fmt.Printf("Repairing. %v\n", dl.String())
-					go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
-				}
-				//go p.DownloadBlock(dl, lattice.DataStream)
 			} else {
 				e.DebugPrint("Download success. %v\n", dl.String())
 				if !dl.IsParity && dl.DownloadStatus != 3 {

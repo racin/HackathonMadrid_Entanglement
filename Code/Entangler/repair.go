@@ -48,7 +48,7 @@ func DebugPrint(format string, a ...interface{}) (int, error) {
 	if ok && z == "" {
 		return 0, nil
 	}
-	if false {
+	if true {
 		return fmt.Printf(format, a...)
 	}
 	return 0, nil
@@ -110,25 +110,25 @@ func (l *Lattice) HierarchicalRepair(block *Block, result chan *Block, path []*B
 			if len(block.Left) > i && block.Left[i].HasData() && len(block.Right) > i && block.Right[i].HasData() {
 				block, _ = l.XORBlocks(block.Left[i], block.Right[i])
 				DebugPrint("Reconstructed block. %v\n", block.String())
+				break
 			}
+		}
+		if result != nil {
+			if block.HasData() {
+				DebugPrint("Sending block: %d, back on the channel\n", block.Position)
+				result <- block
+				return block
+			} else if i == l.Alpha-1 {
+				// Exhausted all possibilities.
+				// Wait indefinately for file ?
 
-			if result != nil {
-				if block.HasData() {
-					DebugPrint("Sending block: %d, back on the channel\n", block.Position)
+				// Fatal error.. Could not repair
+				DebugPrint("DID NOT FIND ANY WAY TO REPAIR BLOCK. ??? :-( %v\n", block.String())
+				if result != nil {
 					result <- block
-					return block
-				} else if i == l.Alpha-1 {
-					// Exhausted all possibilities.
-					// Wait indefinately for file ?
-
-					// Fatal error.. Could not repair
-					DebugPrint("DID NOT FIND ANY WAY TO REPAIR BLOCK. ??? :-( %v\n", block.String())
-					if result != nil {
-						result <- block
-					}
-					//result <- nil
-					//return block
 				}
+				//result <- nil
+				//return block
 			}
 		}
 
