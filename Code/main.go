@@ -105,7 +105,7 @@ func setupRoutes() {
 }
 
 func main() {
-	dp := SwarmConnector.NewDownloadPool(1000, "https://swarm-gateways.net")
+	dp := SwarmConnector.NewDownloadPool(100, "https://swarm-gateways.net")
 	t := time.Now().Unix()
 	err := dp.DownloadFile("../retrives.txt", "../files/main_"+fmt.Sprintf("%d", t)+".jpeg")
 	fmt.Println("Downloaded file")

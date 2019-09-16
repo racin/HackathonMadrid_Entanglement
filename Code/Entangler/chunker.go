@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-const MaxChunkSize float64 = 3900
+const MaxChunkSize float64 = 4096 //3900
 const ChunkDirectory string = "../files/"
 const TestingDirectory string = "../testing/"
 const TempDirectory string = "../temp/"

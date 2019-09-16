@@ -71,10 +71,10 @@ var unAvailableData map[int]bool = map[int]bool{
 	16: true,
 }
 var unAvailableParity map[int][]int = map[int][]int{
-	1:  []int{6, 7, 10},
-	6:  []int{11, 12, 15},
-	7:  []int{12, 13, 11},
-	11: []int{16, 17, 20},
+	1:  []int{6, 10},
+	6:  []int{11, 15},
+	7:  []int{12, 11},
+	11: []int{16, 20},
 	16: []int{21, 25},
 }
 
@@ -110,10 +110,10 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 		result <- block
 		return
 	}
+	start := time.Now().Unix()
 	block.DownloadStatus = 1
 
 	dl := p.reserve()
-	defer p.release(dl)
 
 	content := make(chan []byte, 1) // Buffered chan is non-blocking
 	//defer close(content)
@@ -130,8 +130,13 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 				p.lattice.DataStream <- block
 
 			}
+		} else {
+			fmt.Println(err.Error())
 		}
+
+		p.release(dl)
 		block.DownloadStatus = 0
+		fmt.Printf("%t,%d,%d,%d,%t,%d,%d\n", block.IsParity, block.Position, block.LeftPos(0), block.RightPos(0), block.HasData(), start, time.Now().Unix())
 		//result <- block
 
 		// Dont use result
@@ -139,7 +144,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	}()
 	select {
 	//case <-time.After(1 * time.Second):
-	case <-time.After(2000 * time.Millisecond):
+	case <-time.After(5000 * time.Millisecond):
 		//e.DebugPrint("TIMEOUT.%v\n", block.String())
 		result <- block
 	case <-content:
@@ -172,7 +177,7 @@ repairs:
 			} else if !dl.HasData() {
 				// repair
 				//e.DebugPrint("Block was missing. Position: %d\n", dl.Position)
-				if dl.Position < 6 || dl.Position > 244 { // Closed lattice ..
+				if dl.Position < 6 || dl.Position > 240 { // Closed lattice ..
 					go p.DownloadBlock(dl, lattice.DataStream)
 				} else {
 					go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
