@@ -64,18 +64,17 @@ func NewDownloadPool(capacity int, endpoint string) *DownloadPool {
 }
 
 var unAvailableData map[int]bool = map[int]bool{
-	//6:  true,
-	7:  true,
-	11: true,
-	15: true,
-	16: true,
+	// 7:  true,
+	// 11: true,
+	// 15: true,
+	// 16: true,
 }
 var unAvailableParity map[int][]int = map[int][]int{
-	1:  []int{6, 10},
-	6:  []int{11, 15},
-	7:  []int{12, 11},
-	11: []int{16, 20},
-	16: []int{21, 25},
+	// 1:  []int{6, 10},
+	// 6:  []int{11, 15},
+	// 7:  []int{12, 11},
+	// 11: []int{16, 20},
+	// 16: []int{21, 25},
 }
 
 func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
@@ -110,7 +109,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 		result <- block
 		return
 	}
-	start := time.Now().Unix()
+	start := time.Now().UnixNano()
 	block.DownloadStatus = 1
 
 	dl := p.reserve()
@@ -136,7 +135,7 @@ func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 
 		p.release(dl)
 		block.DownloadStatus = 0
-		fmt.Printf("%t,%d,%d,%d,%t,%d,%d\n", block.IsParity, block.Position, block.LeftPos(0), block.RightPos(0), block.HasData(), start, time.Now().Unix())
+		fmt.Printf("%t,%d,%d,%d,%t,%d,%d\n", block.IsParity, block.Position, block.LeftPos(0), block.RightPos(0), block.HasData(), start, time.Now().UnixNano())
 		//result <- block
 
 		// Dont use result

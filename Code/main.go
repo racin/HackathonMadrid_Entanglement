@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	bzzclient "github.com/ethereum/go-ethereum/swarm/api/client"
 	"github.com/racin/HackathonMadrid_Entanglement/Code/Entangler"
 	"github.com/racin/HackathonMadrid_Entanglement/Code/SwarmConnector"
 	"io/ioutil"
@@ -106,14 +108,45 @@ func setupRoutes() {
 
 func main() {
 	dp := SwarmConnector.NewDownloadPool(100, "https://swarm-gateways.net")
-	t := time.Now().Unix()
+	t := time.Now().UnixNano()
 	err := dp.DownloadFile("../retrives.txt", "../files/main_"+fmt.Sprintf("%d", t)+".jpeg")
 	fmt.Println("Downloaded file")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+
+	fmt.Printf("%d,%d\n", t, time.Now().UnixNano())
 	//setupRoutes()
+
+	//downloadSingleFile("6706e8391baa50938420e475006617ccc3fa60794a1b3121f3d56c5cb4e67485")
 	//upload("/home/gob/Desktop/Ålgård_Station.jpg", "AlgardStasjon.jpg")
+	//uploadLarge()
+}
+
+func downloadSingleFile(identifier string) {
+	t := time.Now().UnixNano()
+	client := bzzclient.NewClient("https://swarm-gateways.net")
+	if file, err := client.Download(identifier, ""); err == nil {
+		if contentA, err := ioutil.ReadAll(file); err == nil {
+
+			f, err := os.Create(Entangler.DownloadDirectory + "main_" + fmt.Sprintf("%d", t) + ".jpeg")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			w := bufio.NewWriter(f)
+			w.Write(contentA)
+
+			w.Flush()
+		}
+	} else {
+		fmt.Println(err.Error())
+	}
+	fmt.Printf("%d,%d\n", t, time.Now().UnixNano())
+}
+
+func uploadLarge() {
+	// Upload
+	SwarmConnector.UploadAllChunks()
 }
 
 func upload(filepath string, filename string) {

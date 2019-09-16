@@ -46,6 +46,35 @@ func UploadAllChunks() {
 
 }
 
+func UploadLargeFile() {
+	//define Swarm client
+	//Create file retrieval log info
+
+	newFile, err = os.Create("../retrives.txt")
+	//Read directory
+
+	files, err := ioutil.ReadDir(UploadDirectory)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var fs map[string]string = make(map[string]string)
+	for _, file := range files {
+
+		//Upload file[n]
+		manifestHash := SwarmUpload(file)
+		if manifestHash == "" {
+			continue
+		}
+		//Log retrieval information
+
+		fs[filepath.Base(file.Name())] = manifestHash
+		byteArr, _ := json.Marshal(fs)
+		ioutil.WriteFile("../retrives.txt", byteArr, 0644)
+	}
+
+}
+
 func SwarmUpload(fileInfo os.FileInfo) string {
 	if fileInfo.Name() == ".DS_Store" {
 		return ""
