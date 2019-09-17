@@ -3,9 +3,11 @@ package Entangler
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const MaxSizeChunk int = 3900
@@ -66,17 +68,26 @@ func sortConfigKeys(keys []reflect.Value, alpha, s, p int) ([]reflect.Value, []r
 
 func createParities(conf map[string]string,
 	keys []reflect.Value, blocks []*Block,
-	class StrandClass) []*Block {
+	class StrandClass, unAvailablePct int) []*Block {
 	for _, key := range keys {
 		keyStr := key.String()
 		position := keyStr[1:]
 		leftright := strings.Split(position, "_")
 		left, _ := strconv.Atoi(leftright[0])
 		right, _ := strconv.Atoi(leftright[1])
+		rnd := rand.Intn(100)
+		var unavail bool
+		if rnd < unAvailablePct {
+			unavail = true
+		}
 
-		b := &Block{IsParity: true, Class: class,
-			Identifier: conf[keyStr], Data: make([]byte, 0, MaxSizeChunk),
-			Left: make([]*Block, 0, 1), Right: make([]*Block, 0, 1)}
+		b := &Block{IsParity: true,
+			Class:         class,
+			Identifier:    conf[keyStr],
+			Data:          make([]byte, 0, MaxSizeChunk),
+			Left:          make([]*Block, 0, 1),
+			Right:         make([]*Block, 0, 1),
+			IsUnavailable: unavail}
 
 		if left > 0 {
 			if dataLeft := blocks[left-1]; dataLeft != nil {
@@ -96,16 +107,23 @@ func createParities(conf map[string]string,
 }
 
 func createDataBlocks(conf map[string]string, keys []reflect.Value,
-	blocks []*Block, alpha int) []*Block {
+	blocks []*Block, alpha int, unAvailablePct int) []*Block {
 	for _, key := range keys {
 		keyStr := key.String()
 		position := keyStr[1:]
 		pos, _ := strconv.Atoi(position)
+		rnd := rand.Intn(100)
+		var unavail bool
+		if rnd < unAvailablePct {
+			unavail = true
+		}
+
 		b := &Block{Position: pos, IsParity: false,
-			Left:       make([]*Block, 0, alpha),
-			Right:      make([]*Block, 0, alpha),
-			Identifier: conf[keyStr],
-			Data:       make([]byte, 0, MaxSizeChunk)}
+			Left:          make([]*Block, 0, alpha),
+			Right:         make([]*Block, 0, alpha),
+			Identifier:    conf[keyStr],
+			Data:          make([]byte, 0, MaxSizeChunk),
+			IsUnavailable: unavail}
 		blocks = append(blocks, b)
 	}
 	return blocks
@@ -115,15 +133,16 @@ func NewLattice(alpha, s, p int, confpath string, datarequest chan *DownloadRequ
 	conf, _ := LoadFileStructure(confpath)
 	dataKeys, hpKeys, rpKeys, lpKeys := sortConfigKeys(reflect.ValueOf(conf).MapKeys(), alpha, s, p)
 	blocks := make([]*Block, 0, len(conf))
+	rand.Seed(time.Now().UnixNano())
 	//datablocks := make(map[string]*Block, len(dataKeys))
 	//datablocks := make([]*Block, len(dataKeys))
 
-	blocks = createDataBlocks(conf, dataKeys, blocks, alpha)
+	blocks = createDataBlocks(conf, dataKeys, blocks, alpha, 60)
 	//copy(datablocks, blocks) // Blocks should be sorted already.
 
-	blocks = createParities(conf, hpKeys, blocks, Horizontal)
-	blocks = createParities(conf, rpKeys, blocks, Right)
-	blocks = createParities(conf, lpKeys, blocks, Left)
+	blocks = createParities(conf, hpKeys, blocks, Horizontal, 60)
+	blocks = createParities(conf, rpKeys, blocks, Right, 60)
+	blocks = createParities(conf, lpKeys, blocks, Left, 60)
 
 	return &Lattice{
 		// DataNodes:   make([]*DataBlock, esize),
@@ -172,6 +191,7 @@ type Block struct {
 	Identifier     string
 	DownloadStatus int
 	WasDownloaded  bool
+	IsUnavailable  bool
 }
 
 type StrandClass int

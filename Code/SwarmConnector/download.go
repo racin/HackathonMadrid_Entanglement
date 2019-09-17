@@ -80,8 +80,11 @@ var unAvailableParity map[int][]int = map[int][]int{
 func (p *DownloadPool) DownloadBlock(block *e.Block, result chan *e.Block) {
 	e.DebugPrint("GOT DATA REQUEST. %v\n", block.String())
 
-	if unAvailableData[block.Position] {
-		e.DebugPrint("UNAVAILABLE DATA BLOCK %v\n", block.String())
+	if unAvailableData[block.Position] ||
+		(block.IsUnavailable && len(block.Left) > 0 && len(block.Left[0].Left) > 0 &&
+			len(block.Right) > 0 && len(block.Right[0].Right) > 0) {
+		e.DebugPrint("UNAVAILABLE BLOCK %v\n", block.String())
+		e.DebugPrint("Len left: %v, Len right: %v\n", len(block.Left[0].Left), len(block.Right[0].Right))
 		result <- block
 		return
 	}
@@ -164,6 +167,11 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 
 	datablocks, parityblocks := 0, 0
 	// 3. Issue repairs if neccesary
+	go func() {
+		time.Sleep(10 * time.Second)
+		fmt.Println("TIMEOUT - NOT REPAIRABLE LATTICE -- IGNORE")
+		os.Exit(0)
+	}()
 repairs:
 	for {
 		select {
@@ -176,9 +184,10 @@ repairs:
 			} else if !dl.HasData() {
 				// repair
 				//e.DebugPrint("Block was missing. Position: %d\n", dl.Position)
-				if dl.Position < 6 || dl.Position > 240 { // Closed lattice ..
+				if dl.Position < 6 || (dl.Position > 242 && dl.Position != 245) { // Closed lattice ..
 					go p.DownloadBlock(dl, lattice.DataStream)
 				} else {
+					//go p.DownloadBlock(dl, lattice.DataStream)
 					go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
 					//go lattice.RoundrobinRepair(dl, lattice.DataStream, make([]*e.Block, 0))
 				}
