@@ -268,8 +268,13 @@ func (l *Lattice) RoundrobinRepair(block *Block, result chan *Block, path []*Blo
 	if !block.IsParity {
 		for i := 0; i < l.Alpha; i++ {
 			res := make(chan *Block, 2)
-			l.DataRequest <- &DownloadRequest{Block: block.Left[i], Result: res}
-			l.DataRequest <- &DownloadRequest{Block: block.Right[i], Result: res}
+			if len(block.Left) > i {
+				l.DataRequest <- &DownloadRequest{Block: block.Left[i], Result: res}
+			}
+			if len(block.Right) > i {
+				l.DataRequest <- &DownloadRequest{Block: block.Right[i], Result: res}
+			}
+
 			j := 0
 		roundrobinrepair:
 			for {

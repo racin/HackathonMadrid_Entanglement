@@ -137,12 +137,12 @@ func NewLattice(alpha, s, p int, confpath string, datarequest chan *DownloadRequ
 	//datablocks := make(map[string]*Block, len(dataKeys))
 	//datablocks := make([]*Block, len(dataKeys))
 
-	blocks = createDataBlocks(conf, dataKeys, blocks, alpha, 60)
+	blocks = createDataBlocks(conf, dataKeys, blocks, alpha, 15)
 	//copy(datablocks, blocks) // Blocks should be sorted already.
 
-	blocks = createParities(conf, hpKeys, blocks, Horizontal, 60)
-	blocks = createParities(conf, rpKeys, blocks, Right, 60)
-	blocks = createParities(conf, lpKeys, blocks, Left, 60)
+	blocks = createParities(conf, hpKeys, blocks, Horizontal, 15)
+	blocks = createParities(conf, rpKeys, blocks, Right, 15)
+	blocks = createParities(conf, lpKeys, blocks, Left, 15)
 
 	return &Lattice{
 		// DataNodes:   make([]*DataBlock, esize),

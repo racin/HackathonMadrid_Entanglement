@@ -168,7 +168,7 @@ func (p *DownloadPool) DownloadFile(config, output string) error {
 	datablocks, parityblocks := 0, 0
 	// 3. Issue repairs if neccesary
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(120 * time.Second)
 		fmt.Println("TIMEOUT - NOT REPAIRABLE LATTICE -- IGNORE")
 		os.Exit(0)
 	}()
@@ -188,8 +188,8 @@ repairs:
 					go p.DownloadBlock(dl, lattice.DataStream)
 				} else {
 					//go p.DownloadBlock(dl, lattice.DataStream)
-					go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
-					//go lattice.RoundrobinRepair(dl, lattice.DataStream, make([]*e.Block, 0))
+					//go lattice.HierarchicalRepair(dl, lattice.DataStream, make([]*e.Block, 0))
+					go lattice.RoundrobinRepair(dl, lattice.DataStream, make([]*e.Block, 0))
 				}
 				//go p.DownloadBlock(dl, lattice.DataStream)
 			} else {
